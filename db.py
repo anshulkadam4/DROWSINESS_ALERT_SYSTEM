@@ -404,7 +404,8 @@ def init_sqlite_schema_if_needed():
 
     # Check if seed data exists
     cur.execute("SELECT COUNT(*) FROM Users")
-    if cur.fetchone()[0] == 0:
+    is_new_database = cur.fetchone()[0] == 0
+    if is_new_database:
         # Seed Users: default passwords hashed (admin123, faculty123)
         # Using Werkzeug generate_password_hash format: pbkdf2:sha256
         from werkzeug.security import generate_password_hash
@@ -421,10 +422,8 @@ def init_sqlite_schema_if_needed():
             VALUES (?, ?, ?, ?, ?)
         """, ('faculty', faculty_hash, 'Faculty Demo', 'Faculty', 'faculty@example.com'))
 
-    if (
-        os.environ.get("DEMO_MODE", "false").lower() in ("true", "1", "yes")
-        and not hasattr(hashlib, "scrypt")
-    ):
+    demo_mode = os.environ.get("DEMO_MODE", "false").lower() in ("true", "1", "yes")
+    if demo_mode and (is_new_database or not hasattr(hashlib, "scrypt")):
         from werkzeug.security import generate_password_hash
 
         # Older demo databases may contain scrypt hashes unavailable in this Python build.

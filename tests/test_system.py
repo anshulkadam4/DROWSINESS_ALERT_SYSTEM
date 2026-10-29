@@ -16,7 +16,9 @@ import os
 import unittest
 import json
 import sqlite3
+import tempfile
 import uuid
+from unittest.mock import patch
 
 # Ensure we use test environment
 os.environ["DB_FORCE_ENGINE"] = "sqlite"
@@ -24,6 +26,7 @@ os.environ["DEMO_AUTO_LOGIN"] = "true"
 os.environ["DEMO_MODE"] = "true"
 
 from db import get_connection, init_sqlite_schema_if_needed, diagnose_connection
+import db
 from auth import authenticate_user
 import services
 from app import app
@@ -50,6 +53,31 @@ class TestAegisAlertSystem(unittest.TestCase):
 
         cur.close()
         conn.close()
+
+    def test_demo_database_seeds_sample_records_on_fresh_database(self):
+        """A fresh demo database gets sample rows even when hashlib supports scrypt."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            database_path = os.path.join(temp_dir, "fresh_demo.db")
+            with patch.object(db, "SQLITE_DB_PATH", database_path):
+                with patch.object(
+                    db.hashlib, "scrypt", lambda *args, **kwargs: None, create=True
+                ):
+                    db.init_sqlite_schema_if_needed()
+                    conn = sqlite3.connect(database_path)
+                    try:
+                        for table, expected_count in (
+                            ("Student", 7),
+                            ("Sessions", 5),
+                            ("Device", 5),
+                            ("Alert", 8),
+                        ):
+                            with self.subTest(table=table):
+                                count = conn.execute(
+                                    f"SELECT COUNT(*) FROM {table}"
+                                ).fetchone()[0]
+                                self.assertEqual(count, expected_count)
+                    finally:
+                        conn.close()
 
     def test_02_student_crud_and_profile(self):
         """Tests student enrollment, demographic update, profile retrieval, and deletion."""
