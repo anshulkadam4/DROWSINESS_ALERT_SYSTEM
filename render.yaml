@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: aegisalert
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn --bind 0.0.0.0:$PORT app:app
+    plan: free
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEMO_MODE
+        value: "false"
+      - key: DEMO_AUTO_LOGIN
+        value: "false"
+      - key: DB_FORCE_ENGINE
+        value: oracle
+      - key: ORACLE_STRICT_MODE
+        value: "true"
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_DSN
+        sync: false
