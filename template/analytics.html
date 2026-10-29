@@ -1,0 +1,276 @@
+{% extends "base.html" %}
+
+{% block title %}Analytics • AegisAlert{% endblock %}
+{% block page_title %}Predictive Analytics &amp; Incident Intelligence{% endblock %}
+
+{% block content %}
+<!-- KPI SUMMARY -->
+<div class="kpi-grid">
+    <div class="kpi-card">
+        <div class="kpi-card-header">
+            <span class="kpi-label">Cumulative Incidents</span>
+            <div class="kpi-icon icon-blue">📊</div>
+        </div>
+        <div class="kpi-number">{{ stats.total_alerts }}</div>
+        <div class="kpi-footer">Across all registered sessions</div>
+    </div>
+
+    <div class="kpi-card">
+        <div class="kpi-card-header">
+            <span class="kpi-label">High Risk Incidents</span>
+            <div class="kpi-icon icon-red">🚨</div>
+        </div>
+        <div class="kpi-number" style="color: #f87171;">{{ stats.high }}</div>
+        <div class="kpi-footer">Requires proctor follow-up</div>
+    </div>
+
+    <div class="kpi-card">
+        <div class="kpi-card-header">
+            <span class="kpi-label">Resolved Rate</span>
+            <div class="kpi-icon icon-green">✅</div>
+        </div>
+        <div class="kpi-number" style="color: #34d399;">
+            {% if stats.total_alerts > 0 %}
+                {{ ((stats.resolved / stats.total_alerts) * 100) | round(1) }}%
+            {% else %}
+                0%
+            {% endif %}
+        </div>
+        <div class="kpi-footer">{{ stats.resolved }} / {{ stats.total_alerts }} resolved</div>
+    </div>
+
+    <div class="kpi-card">
+        <div class="kpi-card-header">
+            <span class="kpi-label">Sensor Utilization</span>
+            <div class="kpi-icon icon-purple">📡</div>
+        </div>
+        <div class="kpi-number">
+            {% if stats.total_devices > 0 %}
+                {{ ((stats.active_devices / stats.total_devices) * 100) | round(0) | int }}%
+            {% else %}
+                100%
+            {% endif %}
+        </div>
+        <div class="kpi-footer">{{ stats.active_devices }} of {{ stats.total_devices }} devices online</div>
+    </div>
+</div>
+
+<!-- CHARTS GRID -->
+<div class="form-grid">
+    <!-- Chart 1: 7-Day Trend -->
+    <div class="panel-card">
+        <div class="panel-header">
+            <div class="panel-title">Weekly Incident Detection Trend</div>
+            <span style="font-size: 11.5px; color: var(--text-muted);">
+                {% if stats.trend_counts | sum == 0 %}No alerts in this period{% else %}Stored timestamps • last 7 days{% endif %}
+            </span>
+        </div>
+        <div style="height: 240px; position: relative;">
+            <canvas id="weeklyTrendChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Chart 2: Category Distribution -->
+    <div class="panel-card">
+        <div class="panel-header">
+            <div class="panel-title">Behavioral Distribution</div>
+            <span style="font-size: 11.5px; color: var(--text-muted);">Classification split</span>
+        </div>
+        <div style="height: 240px; position: relative;">
+            <canvas id="categoryDonutChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<div class="form-grid">
+    <!-- Chart 3: Severity Breakdown -->
+    <div class="panel-card">
+        <div class="panel-header">
+            <div class="panel-title">Severity Criticality Distribution</div>
+            <span style="font-size: 11.5px; color: var(--text-muted);">Low / Medium / High / Critical</span>
+        </div>
+        <div style="height: 220px; position: relative;">
+            <canvas id="severityBarChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Chart 4: Hourly Peak Times -->
+    <div class="panel-card">
+        <div class="panel-header">
+            <div class="panel-title">Peak Incident Hours (Lecture Times)</div>
+            <span style="font-size: 11.5px; color: var(--text-muted);">
+                {% if stats.hour_data | sum == 0 %}No alerts in this time range{% else %}Stored alert timestamps • 09:00–16:00{% endif %}
+            </span>
+        </div>
+        <div style="height: 220px; position: relative;">
+            <canvas id="hourlyPeakChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- FREQUENT ALERT CANDIDATES -->
+<div class="data-section-card">
+    <div class="table-toolbar">
+        <div>
+            <h3 style="font-size: 15px; font-weight: 700;">Repeated Alert Frequency Ranking</h3>
+            <p style="font-size: 12px; color: var(--text-muted);">Identifies students with consecutive inattention events across sessions</p>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="modern-table">
+            <thead>
+                <tr>
+                    <th>Registration ID</th>
+                    <th>Student Name</th>
+                    <th>Cumulative Incidents</th>
+                    <th>High Risk Incidents</th>
+                    <th>Pattern Classification</th>
+                    <th style="text-align: right;">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for st in stats.frequent_students %}
+                    <tr>
+                        <td><span class="badge-id">{{ st.student_id }}</span></td>
+                        <td style="font-weight: 600;">{{ st.student_name }}</td>
+                        <td><span style="font-weight: 700; color: #f87171;">{{ st.count }} Events</span></td>
+                        <td>{{ st.high_count }} High Risk</td>
+                        <td>
+                            <span class="badge-trend trend-high">
+                                Repeated Alert Pattern
+                            </span>
+                        </td>
+                        <td style="text-align: right;">
+                            <a href="{{ url_for('student_profile', student_id=st.student_id) }}" class="btn btn-secondary" style="padding: 4px 10px; font-size: 11.5px;">
+                                View Dossier →
+                            </a>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 24px 0; color: var(--text-muted);">
+                            No students currently have repeat incident patterns.
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    // 1. Weekly Trend
+    const weeklyCtx = document.getElementById("weeklyTrendChart").getContext("2d");
+    new Chart(weeklyCtx, {
+        type: "line",
+        data: {
+            labels: {{ stats.trend_days | tojson }},
+            datasets: [
+                {
+                    label: "Total Incidents",
+                    data: {{ stats.trend_counts | tojson }},
+                    borderColor: "#3b82f6",
+                    backgroundColor: "rgba(59, 130, 246, 0.15)",
+                    fill: true,
+                    tension: 0.35,
+                    borderWidth: 2
+                },
+                {
+                    label: "High Risk",
+                    data: {{ stats.trend_highs | tojson }},
+                    borderColor: "#ef4444",
+                    backgroundColor: "transparent",
+                    borderWidth: 2,
+                    borderDash: [5, 5]
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: "top", labels: { color: "#94a3b8", boxWidth: 12 } }
+            },
+            scales: {
+                y: { beginAtZero: true, grid: { color: "rgba(255,255,255,0.06)" }, ticks: { color: "#64748b" } },
+                x: { grid: { display: false }, ticks: { color: "#94a3b8" } }
+            }
+        }
+    });
+
+    // 2. Category Doughnut
+    const catCtx = document.getElementById("categoryDonutChart").getContext("2d");
+    new Chart(catCtx, {
+        type: "doughnut",
+        data: {
+            labels: ["Drowsiness", "Negligence", "Distraction", "Absence"],
+            datasets: [{
+                data: [{{ stats.drowsiness }}, {{ stats.negligence }}, {{ stats.distraction }}, {{ stats.absence }}],
+                backgroundColor: ["#6366f1", "#f59e0b", "#3b82f6", "#64748b"],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: "bottom", labels: { color: "#94a3b8", boxWidth: 12 } }
+            },
+            cutout: "68%"
+        }
+    });
+
+    // 3. Severity Bar
+    const sevCtx = document.getElementById("severityBarChart").getContext("2d");
+    new Chart(sevCtx, {
+        type: "bar",
+        data: {
+            labels: ["Low Risk", "Medium Risk", "High Risk", "Critical"],
+            datasets: [{
+                data: [{{ stats.low }}, {{ stats.medium }}, {{ stats.high - stats.critical }}, {{ stats.critical }}],
+                backgroundColor: ["#10b981", "#f59e0b", "#ef4444", "#7f1d1d"],
+                borderRadius: 5,
+                barThickness: 28
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero: true, grid: { color: "rgba(255,255,255,0.06)" }, ticks: { color: "#64748b" } },
+                x: { grid: { display: false }, ticks: { color: "#94a3b8" } }
+            }
+        }
+    });
+
+    // 4. Hourly Peak Bar
+    const hourCtx = document.getElementById("hourlyPeakChart").getContext("2d");
+    new Chart(hourCtx, {
+        type: "bar",
+        data: {
+            labels: {{ stats.hour_labels | tojson }},
+            datasets: [{
+                data: {{ stats.hour_data | tojson }},
+                backgroundColor: "#f97316",
+                borderRadius: 4,
+                barThickness: 20
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero: true, grid: { color: "rgba(255,255,255,0.06)" }, ticks: { color: "#64748b" } },
+                x: { grid: { display: false }, ticks: { color: "#94a3b8" } }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

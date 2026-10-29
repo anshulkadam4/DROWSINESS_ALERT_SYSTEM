@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block title %}Notification Center • AegisAlert{% endblock %}
+{% block page_title %}Notification Dispatch Log (Email &amp; SMS){% endblock %}
+
+{% block content %}
+<div class="data-section-card">
+    <div class="table-toolbar">
+        <div>
+            <h2 style="font-size: 15.5px; font-weight: 700;">Database-Backed Notification History (Alert_Notifications ER Entity)</h2>
+            <p style="font-size: 12px; color: var(--text-muted);">
+                Audit of automated alerts dispatched to students and proctors upon detected inattention events
+            </p>
+        </div>
+
+        <div style="display:flex; align-items:center; gap: 8px;">
+            <span class="badge-trend trend-amber" style="font-size: 11.5px; padding: 4px 10px;">
+                ⚡ Simulation Sandbox Active (Zero External API Costs)
+            </span>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="modern-table">
+            <thead>
+                <tr>
+                    <th>Notif ID</th>
+                    <th>Alert Reference</th>
+                    <th>Target Recipient</th>
+                    <th>Channel</th>
+                    <th>Dispatched Message Body</th>
+                    <th>Sent Timestamp</th>
+                    <th>Delivery Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for n in notifications %}
+                    <tr>
+                        <td><span class="badge-id">#{{ n.notification_id }}</span></td>
+                        <td>
+                            <a href="{{ url_for('alerts_list', q=n.alert_id) }}" style="color: #60a5fa; font-weight: 600; text-decoration: none;">
+                                Alert #{{ n.alert_id }}
+                            </a>
+                            <div style="font-size: 11px; color: var(--text-muted);">{{ n.alert_type }} • {{ n.severity }}</div>
+                        </td>
+                        <td style="font-family: monospace; font-size: 12px; font-weight: 600;">
+                            {{ n.recipient }}
+                        </td>
+                        <td>
+                            <span class="badge-id" style="color: {% if n.channel == 'Email' %}#38bdf8{% else %}#34d399{% endif %};">
+                                {% if n.channel == 'Email' %}✉️ Email{% else %}📱 SMS{% endif %}
+                            </span>
+                        </td>
+                        <td style="font-size: 12px; color: var(--text-secondary); max-width: 320px;">
+                            {{ n.message_text }}
+                        </td>
+                        <td style="font-size: 12px; color: var(--text-muted);">
+                            {{ n.sent_time }}
+                        </td>
+                        <td>
+                            <span class="status-badge {% if n.status == 'Delivered' %}st-resolved{% else %}st-pending{% endif %}">
+                                {% if n.status == 'Simulated' %}
+                                    ⚡ Simulated
+                                {% else %}
+                                    ✓ {{ n.status }}
+                                {% endif %}
+                            </span>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="7" style="text-align: center; padding: 36px 0; color: var(--text-muted);">
+                            No notification history logged in database.
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

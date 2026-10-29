@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+
+{% block title %}Devices &amp; Camera Nodes • AegisAlert{% endblock %}
+{% block page_title %}Sensor Devices &amp; Camera Nodes{% endblock %}
+
+{% block content %}
+<div class="data-section-card">
+    <div class="table-toolbar">
+        <div>
+            <h2 style="font-size: 15.5px; font-weight: 700;">Classroom Vision &amp; Sensor Hardware</h2>
+            <p style="font-size: 12px; color: var(--text-muted);">IoT cameras, infrared gaze sensors, and accelerometer telemetry endpoints</p>
+        </div>
+
+        <div style="display:flex; gap: 10px;">
+            <a href="{{ url_for('export_csv', entity='devices') }}" class="btn btn-secondary">
+                <span>Export CSV</span>
+            </a>
+            <button type="button" class="btn btn-primary" onclick="openAddDeviceModal()">
+                + Register Sensor
+            </button>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="modern-table">
+            <thead>
+                <tr>
+                    <th>Device ID</th>
+                    <th>Sensor Hardware Type</th>
+                    <th>Room Location</th>
+                    <th>Install Date</th>
+                    <th>Status</th>
+                    <th>Hardware Health</th>
+                    <th>Recorded Incidents</th>
+                    <th>Associated Nodes</th>
+                    <th style="text-align: right;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for d in devices %}
+                    <tr>
+                        <td><span class="badge-id">#{{ d.device_id }}</span></td>
+                        <td>
+                            <div style="font-weight: 600; display:flex; align-items:center; gap: 8px;">
+                                {% if 'Camera' in d.device_type %}📷{% elif 'IR' in d.device_type %}📡{% elif 'Eye' in d.device_type %}👁{% else %}⏱{% endif %}
+                                <span>{{ d.device_type }}</span>
+                            </div>
+                        </td>
+                        <td><span style="font-weight: 600;">Room {{ d.location }}</span></td>
+                        <td style="font-size: 12px; color: var(--text-muted);">{{ d.install_date }}</td>
+                        <td>
+                            <span class="status-badge {% if d.status == 'Active' %}st-resolved{% else %}st-pending{% endif %}">
+                                {{ d.status }}
+                            </span>
+                        </td>
+                        <td>
+                            <div style="display:flex; align-items:center; gap: 6px;">
+                                <div style="width: 50px; height: 5px; background: var(--bg-card-subtle); border-radius: 3px; overflow:hidden;">
+                                    <div style="width: {{ d.health_score }}%; height: 100%; background: {% if d.health_score > 85 %}#10b981{% elif d.health_score > 60 %}#f59e0b{% else %}#ef4444{% endif %};"></div>
+                                </div>
+                                <span style="font-size: 11.5px; font-weight: 600;">{{ d.health_score }}%</span>
+                            </div>
+                        </td>
+                        <td><span style="font-weight: 600;">{{ d.alert_count }} Alerts</span></td>
+                        <td><span class="badge-id">{{ d.node_count }} Nodes</span></td>
+                        <td style="text-align: right;">
+                            <div style="display:inline-flex; gap: 6px;">
+                                <form action="{{ url_for('toggle_device_route') }}" method="POST" style="display:inline;">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                    <input type="hidden" name="device_id" value="{{ d.device_id }}">
+                                    <button type="submit" class="btn-pill-action {% if d.status == 'Active' %}btn-pill-reject{% else %}btn-pill-approve{% endif %}" title="Toggle Online State">
+                                        {% if d.status == 'Active' %}Deactivate{% else %}Activate{% endif %}
+                                    </button>
+                                </form>
+
+                                <form action="{{ url_for('delete_device_route') }}" method="POST" style="display:inline;" onsubmit="return confirm('Remove device #{{ d.device_id }} and associated camera nodes?');">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                    <input type="hidden" name="device_id" value="{{ d.device_id }}">
+                                    <button type="submit" class="btn-icon" style="width:28px; height:28px; color: #f87171;" title="Delete">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="9" style="text-align: center; padding: 36px 0; color: var(--text-muted);">
+                            No devices registered in database.
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- CAMERA NODES SUB-SECTION (ER DIAGRAM ENTITY) -->
+<div class="data-section-card">
+    <div class="table-toolbar">
+        <div>
+            <h3 style="font-size: 15px; font-weight: 700;">Camera Nodes Telemetry Endpoints (Camera_Nodes ER Entity)</h3>
+            <p style="font-size: 12px; color: var(--text-muted);">Hardware streaming specifications &amp; firmware versions</p>
+        </div>
+        <span class="badge-id">{{ camera_nodes|length }} Active Nodes</span>
+    </div>
+
+    <div class="table-responsive">
+        <table class="modern-table">
+            <thead>
+                <tr>
+                    <th>Node UID</th>
+                    <th>Parent Device</th>
+                    <th>Room Location</th>
+                    <th>Telemetry IP</th>
+                    <th>Resolution</th>
+                    <th>Frame Rate</th>
+                    <th>Firmware</th>
+                    <th>Stream Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for node in camera_nodes %}
+                    <tr>
+                        <td><span class="badge-id" style="color: #60a5fa;">{{ node.node_id }}</span></td>
+                        <td>Device #{{ node.device_id }} ({{ node.device_type }})</td>
+                        <td>Room {{ node.location }}</td>
+                        <td style="font-family: monospace; font-size: 12px;">{{ node.ip_address }}</td>
+                        <td>{{ node.resolution }}</td>
+                        <td>{{ node.frame_rate }} fps</td>
+                        <td><span class="badge-id">{{ node.firmware_version }}</span></td>
+                        <td>
+                            <span class="badge-trend {% if node.stream_status == 'Online' %}trend-positive{% else %}trend-high{% endif %}">
+                                {{ node.stream_status }}
+                            </span>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- MODAL: ADD DEVICE -->
+<div class="modal-backdrop" id="addDeviceModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <div class="modal-title">Register Sensor Hardware</div>
+            <button type="button" class="btn-icon" onclick="closeAddDeviceModal()">✕</button>
+        </div>
+        <form action="{{ url_for('create_device_route') }}" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <div class="modal-body">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Device ID (PK)</label>
+                        <input type="number" name="device_id" value="{{ (devices|length) + 1 }}" class="form-control" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Hardware Type</label>
+                        <select name="device_type" class="form-control" required>
+                            <option value="Camera" selected>📷 High-Res Edge Camera</option>
+                            <option value="IR Sensor">📡 Infrared Gaze Sensor</option>
+                            <option value="Eye Tracker">👁 Pupil / Eye Tracker</option>
+                            <option value="Accelerometer">⏱ Micro-Vibration Sensor</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Classroom / Lab Location</label>
+                        <input type="text" name="location" placeholder="e.g. PRP353, SJT101, TT205" class="form-control" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Initial Status</label>
+                        <select name="status" class="form-control">
+                            <option value="Active" selected>Active</option>
+                            <option value="Inactive">Inactive</option>
+                            <option value="Maintenance">Maintenance</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group col-full">
+                        <label>Baseline Health Metric (0-100%)</label>
+                        <input type="number" name="health_score" value="98" min="1" max="100" class="form-control" required>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeAddDeviceModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Register Device</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openAddDeviceModal() {
+    document.getElementById("addDeviceModal").classList.add("active");
+}
+function closeAddDeviceModal() {
+    document.getElementById("addDeviceModal").classList.remove("active");
+}
+</script>
+{% endblock %}

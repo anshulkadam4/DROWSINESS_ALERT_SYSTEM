@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}AegisAlert • Student Drowsiness & Negligence Monitoring{% endblock %}</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+
+<div class="app-wrapper">
+
+    <!-- LEFT SIDEBAR -->
+    <aside class="sidebar">
+        <div>
+            <!-- Brand Header -->
+            <a href="{{ url_for('index') }}" class="sidebar-brand">
+                <div class="brand-icon">A</div>
+                <div class="brand-info">
+                    <div class="brand-title">AegisAlert <span>2.0</span></div>
+                    <div class="brand-sub">DBMS Assessment-4 • Proctoring</div>
+                </div>
+            </a>
+
+            <!-- Navigation Links -->
+            <nav class="sidebar-nav">
+                <div class="nav-section-title">Core Operations</div>
+
+                <a href="{{ url_for('index') }}" class="nav-item {% if active_tab == 'dashboard' %}active{% endif %}">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                    <span>Dashboard</span>
+                </a>
+
+                <a href="{{ url_for('alerts_list') }}" class="nav-item {% if active_tab == 'alerts' %}active{% endif %}">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><circle cx="12" cy="11" r="3"></circle></svg>
+                    <span>Smart Alerts</span>
+                </a>
+
+                <a href="{{ url_for('students_list') }}" class="nav-item {% if active_tab == 'students' %}active{% endif %}">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                    <span>Students</span>
+                </a>
+
+                <a href="{{ url_for('sessions_list') }}" class="nav-item {% if active_tab == 'sessions' %}active{% endif %}">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                    <span>Sessions</span>
+                </a>
+
+                <a href="{{ url_for('devices_list') }}" class="nav-item {% if active_tab == 'devices' %}active{% endif %}">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                    <span>Devices & Nodes</span>
+                </a>
+
+                <div class="nav-section-title">Intelligence & Logs</div>
+
+                <a href="{{ url_for('analytics_view') }}" class="nav-item {% if active_tab == 'analytics' %}active{% endif %}">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                    <span>Analytics</span>
+                </a>
+
+                <a href="{{ url_for('reports_view') }}" class="nav-item {% if active_tab == 'reports' %}active{% endif %}">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                    <span>Reports & Export</span>
+                </a>
+
+                <a href="{{ url_for('notifications_view') }}" class="nav-item {% if active_tab == 'notifications' %}active{% endif %}">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                    <span>Notifications</span>
+                </a>
+
+                <a href="{{ url_for('audit_view') }}" class="nav-item {% if active_tab == 'audit' %}active{% endif %}">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                    <span>Audit Trail</span>
+                </a>
+
+                <a href="{{ url_for('diagnostics_view') }}" class="nav-item {% if active_tab == 'diagnostics' %}active{% endif %}">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
+                    <span>DB Diagnostics</span>
+                </a>
+            </nav>
+        </div>
+
+        <!-- Sidebar Footer -->
+        <div class="sidebar-footer">
+            <div class="footer-user-card">
+                <div class="user-avatar-sm">{{ current_user.full_name | initials }}</div>
+                <div class="user-meta-sm">
+                    <div class="u-name">{{ current_user.full_name }}</div>
+                    <div class="u-role">{{ current_user.role }}</div>
+                </div>
+            </div>
+
+            <!-- Role Switcher Form (Quick Demo Shortcut) -->
+            {% if demo_mode %}
+                <form action="{{ url_for('switch_role') }}" method="POST" style="margin-top: 4px;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <input type="hidden" name="role" value="{% if current_user.role == 'Administrator' %}Faculty{% else %}Administrator{% endif %}">
+                    <button type="submit" class="btn btn-secondary" style="width: 100%; justify-content: center; font-size: 11px; padding: 4px 8px;">
+                        ⇄ Switch to {% if current_user.role == 'Administrator' %}Faculty{% else %}Admin{% endif %}
+                    </button>
+                </form>
+            {% endif %}
+        </div>
+    </aside>
+
+    <!-- MAIN WORKSPACE -->
+    <main class="main-workspace">
+
+        <!-- TOP NAVBAR -->
+        <header class="top-header">
+            <div class="header-left">
+                <div class="page-title">{% block page_title %}Dashboard{% endblock %}</div>
+            </div>
+
+            <div class="header-right">
+                <!-- Database Indicator Chip -->
+                <a href="{{ url_for('diagnostics_view') }}" class="db-chip {% if is_oracle %}oracle-active{% else %}demo-active{% endif %}" title="Click to view Database Diagnostics & Settings">
+                    <span class="pulse-dot"></span>
+                    <span>{{ db_label }}</span>
+                </a>
+
+                <!-- Demo event generator -->
+                <form action="{{ url_for('simulate_event') }}" method="POST" style="display:inline;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <button type="submit" class="btn btn-simulate" title="Creates a random sample alert; no camera or AI model is connected">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                        <span>Simulate Event (Demo)</span>
+                    </button>
+                </form>
+
+                {% if current_user.is_authenticated %}
+                    <form action="{{ url_for('logout') }}" method="POST" style="display:inline;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                        <button type="submit" class="btn btn-secondary" title="Sign out">Sign out</button>
+                    </form>
+                {% endif %}
+
+                <!-- Light / Dark Theme Switcher -->
+                <button type="button" class="btn-icon" id="themeToggleBtn" title="Toggle Light/Dark Workspace Mode" aria-label="Toggle light and dark mode" onclick="toggleTheme()">
+                    <svg id="themeIconSun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+                    <svg id="themeIconMoon" style="display:none;" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- TOAST ALERTS CONTAINER -->
+        <div class="toast-container" id="toastContainer">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="toast {{ category }}">
+                            <span>{{ message }}</span>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+        </div>
+
+        <!-- WORKSPACE INNER BODY -->
+        <div class="page-body">
+            {% block content %}{% endblock %}
+        </div>
+
+    </main>
+
+</div>
+
+<!-- JAVASCRIPT HELPERS -->
+<script>
+// THEME SWITCHING (Dark by default matching screenshot, toggle to light)
+function initTheme() {
+    const savedTheme = localStorage.getItem("aegis_theme");
+    setTheme(savedTheme === "light" ? "light" : "dark");
+}
+
+function toggleTheme() {
+    const current = document.documentElement.getAttribute("data-theme") || "dark";
+    const next = current === "light" ? "dark" : "light";
+    setTheme(next);
+}
+
+function setTheme(theme) {
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem("aegis_theme", theme);
+    updateThemeIcons(theme);
+    updateChartTheme(theme);
+}
+
+function updateThemeIcons(theme) {
+    const sun = document.getElementById("themeIconSun");
+    const moon = document.getElementById("themeIconMoon");
+    if (!sun || !moon) return;
+    if (theme === "dark") {
+        sun.style.display = "block";
+        moon.style.display = "none";
+    } else {
+        sun.style.display = "none";
+        moon.style.display = "block";
+    }
+}
+
+function updateChartTheme(theme) {
+    if (!window.Chart) return;
+    const light = theme === "light";
+    requestAnimationFrame(() => {
+        Object.values(Chart.instances).forEach(chart => {
+            Object.values(chart.options.scales || {}).forEach(scale => {
+                if (scale.grid) scale.grid.color = light ? "rgba(15, 23, 42, 0.1)" : "rgba(255, 255, 255, 0.06)";
+                if (scale.ticks) scale.ticks.color = light ? "#64748b" : "#94a3b8";
+            });
+            if (chart.options.plugins?.legend?.labels) {
+                chart.options.plugins.legend.labels.color = light ? "#475569" : "#94a3b8";
+            }
+            chart.update("none");
+        });
+    });
+}
+
+// Fade out toasts
+setTimeout(() => {
+    document.querySelectorAll(".toast").forEach(t => {
+        t.style.opacity = "0";
+        t.style.transition = "opacity 0.4s ease";
+        setTimeout(() => t.remove(), 400);
+    });
+}, 4500);
+
+document.addEventListener("DOMContentLoaded", initTheme);
+</script>
+
+{% block scripts %}{% endblock %}
+</body>
+</html>

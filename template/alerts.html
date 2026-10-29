@@ -1,0 +1,379 @@
+{% extends "base.html" %}
+
+{% block title %}Smart Alerts • AegisAlert{% endblock %}
+{% block page_title %}Smart Alerts Management{% endblock %}
+
+{% block content %}
+<div class="data-section-card">
+    <!-- Toolbar -->
+    <div class="table-toolbar">
+        <div class="filter-pills">
+            <a href="{{ url_for('alerts_list', type='all', severity='all', status='all') }}" class="filter-pill {% if current_type == 'all' and current_severity == 'all' and current_status == 'all' %}active{% endif %}">All Alerts</a>
+            <a href="{{ url_for('alerts_list', status='Pending') }}" class="filter-pill {% if current_status == 'Pending' %}active{% endif %}">⚠️ Unresolved (Pending)</a>
+            <a href="{{ url_for('alerts_list', severity='High') }}" class="filter-pill {% if current_severity == 'High' %}active{% endif %}">🚨 High Risk</a>
+            <a href="{{ url_for('alerts_list', type='Drowsiness') }}" class="filter-pill {% if current_type == 'Drowsiness' %}active{% endif %}">😴 Drowsiness</a>
+            <a href="{{ url_for('alerts_list', type='Negligence') }}" class="filter-pill {% if current_type == 'Negligence' %}active{% endif %}">📱 Negligence</a>
+        </div>
+
+        <div style="display:flex; align-items:center; gap: 10px;">
+            <form action="{{ url_for('alerts_list') }}" method="GET" class="search-box">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <input type="text" name="q" value="{{ search_query }}" placeholder="Search student, room, subject...">
+            </form>
+
+            <a href="{{ url_for('export_csv', entity='alerts', status=current_status, severity=current_severity) }}" class="btn btn-secondary">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                <span>Export CSV</span>
+            </a>
+
+            <button type="button" class="btn btn-primary" onclick="openCreateModal()">
+                + Record Alert
+            </button>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="table-responsive">
+        <table class="modern-table">
+            <thead>
+                <tr>
+                    <th>Alert ID</th>
+                    <th>Student Details</th>
+                    <th>Academic Session</th>
+                    <th>Sensor &amp; Room</th>
+                    <th>Classification</th>
+                    <th>Severity</th>
+                    <th>Telemetry Metric</th>
+                    <th>Status</th>
+                    <th>Logged At</th>
+                    <th style="text-align: right;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in alerts %}
+                    <tr>
+                        <td><span class="badge-id">#{{ row.alert_id }}</span></td>
+                        <td>
+                            <div class="student-chip">
+                                <div class="avatar" style="background: {{ row.student_id | avatar_color }};">
+                                    {{ row.student_name | initials }}
+                                </div>
+                                <div>
+                                    <a href="{{ url_for('student_profile', student_id=row.student_id) }}" style="color: inherit; text-decoration: none; font-weight: 600;">
+                                        {{ row.student_name }}
+                                    </a>
+                                    <div style="font-size: 11px; color: var(--text-muted);">{{ row.student_id }} • Sec {{ row.section }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div style="font-weight: 600;">{{ row.subject }}</div>
+                            <div style="font-size: 11px; color: var(--text-muted);">{{ row.faculty }}</div>
+                        </td>
+                        <td>
+                            <div style="font-weight: 500;">Room {{ row.location }}</div>
+                            <div style="font-size: 11px; color: var(--text-muted);">{{ row.device_type }} #{{ row.device_id }}</div>
+                        </td>
+                        <td>
+                            <span style="font-weight: 600;">
+                                {% if row.alert_type == 'Drowsiness' %}😴 Drowsiness{% elif row.alert_type == 'Negligence' %}📱 Negligence{% elif row.alert_type == 'Absence' %}Absence{% else %}👀 Distraction{% endif %}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="severity-pill sev-{{ row.severity | lower }}">
+                                {{ row.severity }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if row.eye_closure_sec > 0 %}
+                                <span style="font-family: monospace; font-size: 12px; color: #a78bfa;">{{ row.eye_closure_sec }}s closure</span>
+                            {% else %}
+                                <span style="font-size: 12px; color: var(--text-muted);">Inattention</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="status-badge st-{{ row.status | lower }}">
+                                {{ row.status }}
+                            </span>
+                        </td>
+                        <td style="font-size: 12px; color: var(--text-muted);">
+                            {{ row.alert_time }}
+                        </td>
+                        <td style="text-align: right;">
+                            <div style="display:inline-flex; gap: 6px;">
+                                {% if row.status == 'Pending' %}
+                                    <form action="{{ url_for('acknowledge_alert_route') }}" method="POST" style="display:inline;">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                        <input type="hidden" name="alert_id" value="{{ row.alert_id }}">
+                                        <button type="submit" class="btn-pill-action btn-pill-reject" title="Acknowledge">Ack</button>
+                                    </form>
+                                {% endif %}
+
+                                {% if row.status != 'Resolved' %}
+                                    <button type="button" class="btn-pill-action btn-pill-approve" onclick="openResolveModal('{{ row.alert_id }}', '{{ row.student_name }}')">
+                                        Resolve
+                                    </button>
+                                {% endif %}
+
+                                <button type="button" class="btn-icon" style="width:28px; height:28px;" title="Edit Alert" onclick="openEditModal(
+                                    '{{ row.alert_id }}',
+                                    '{{ row.student_id }}',
+                                    '{{ row.session_id }}',
+                                    '{{ row.device_id }}',
+                                    '{{ row.alert_type }}',
+                                    '{{ row.severity }}',
+                                    '{{ row.status }}',
+                                    '{{ row.eye_closure_sec }}',
+                                    '{{ row.resolution_notes }}'
+                                )">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                                </button>
+
+                                <form action="{{ url_for('delete_alert_route') }}" method="POST" style="display:inline;" onsubmit="return confirm('Delete Alert #{{ row.alert_id }}?');">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                    <input type="hidden" name="alert_id" value="{{ row.alert_id }}">
+                                    <button type="submit" class="btn-icon" style="width:28px; height:28px; color: #f87171;" title="Delete">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="10" style="text-align: center; padding: 40px 0; color: var(--text-muted);">
+                            No matching alerts found for selected filter criteria.
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- MODAL: CREATE ALERT -->
+<div class="modal-backdrop" id="createAlertModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <div class="modal-title">Record Incident Alert</div>
+            <button type="button" class="btn-icon" onclick="closeCreateModal()">✕</button>
+        </div>
+        <form action="{{ url_for('create_alert_route') }}" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <div class="modal-body">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Alert ID</label>
+                        <input type="number" name="alert_id" value="{{ next_alert_id }}" class="form-control" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Student</label>
+                        <select name="student_id" class="form-control" required>
+                            <option value="" disabled selected>Select student...</option>
+                            {% for s in students %}
+                                <option value="{{ s.student_id }}">{{ s.student_name }} ({{ s.student_id }} - Sec {{ s.class_section }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Session</label>
+                        <select name="session_id" class="form-control" required>
+                            <option value="" disabled selected>Select session...</option>
+                            {% for sess in sessions %}
+                                <option value="{{ sess.session_id }}">{{ sess.subject }} - {{ sess.faculty_name }} (Sec {{ sess.class_section }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Sensor Device</label>
+                        <select name="device_id" class="form-control" required>
+                            <option value="" disabled selected>Select device...</option>
+                            {% for d in devices %}
+                                <option value="{{ d.device_id }}">{{ d.device_type }} #{{ d.device_id }} (Room {{ d.location }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Behavior Classification</label>
+                        <select name="alert_type" class="form-control" required>
+                            <option value="Drowsiness">😴 Drowsiness (Eye Closure / Fatigue)</option>
+                            <option value="Negligence">📱 Negligence (Secondary Device / Distraction)</option>
+                            <option value="Distraction">👀 Distraction (Gaze Deviation)</option>
+                            <option value="Absence">Absence</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Risk Severity Level</label>
+                        <select name="severity" class="form-control" required>
+                            <option value="Low">🟢 Low</option>
+                            <option value="Medium" selected>🟡 Medium</option>
+                            <option value="High">🔴 High</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group col-full">
+                        <label>Eye Closure Duration (seconds - demonstration rule)</label>
+                        <input type="number" step="0.1" name="eye_closure_sec" value="3.5" class="form-control">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeCreateModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Record Alert</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL: EDIT ALERT -->
+<div class="modal-backdrop" id="editAlertModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <div class="modal-title" id="editModalTitle">Edit Incident Alert</div>
+            <button type="button" class="btn-icon" onclick="closeEditModal()">✕</button>
+        </div>
+        <form action="{{ url_for('update_alert_route') }}" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="alert_id" id="edit_alert_id">
+            <div class="modal-body">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Student</label>
+                        <select name="student_id" id="edit_student_id" class="form-control" required>
+                            {% for s in students %}
+                                <option value="{{ s.student_id }}">{{ s.student_name }} ({{ s.student_id }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Session</label>
+                        <select name="session_id" id="edit_session_id" class="form-control" required>
+                            {% for sess in sessions %}
+                                <option value="{{ sess.session_id }}">{{ sess.subject }} (Sec {{ sess.class_section }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Sensor Device</label>
+                        <select name="device_id" id="edit_device_id" class="form-control" required>
+                            {% for d in devices %}
+                                <option value="{{ d.device_id }}">{{ d.device_type }} #{{ d.device_id }} (Room {{ d.location }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Classification</label>
+                        <select name="alert_type" id="edit_alert_type" class="form-control" required>
+                            <option value="Drowsiness">Drowsiness</option>
+                            <option value="Negligence">Negligence</option>
+                            <option value="Distraction">Distraction</option>
+                            <option value="Absence">Absence</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Severity</label>
+                        <select name="severity" id="edit_severity" class="form-control" required>
+                            <option value="Low">Low</option>
+                            <option value="Medium">Medium</option>
+                            <option value="High">High</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Status</label>
+                        <select name="status" id="edit_status" class="form-control" required>
+                            <option value="Pending">Pending</option>
+                            <option value="Acknowledged">Acknowledged</option>
+                            <option value="Resolved">Resolved</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group col-full">
+                        <label>Eye Closure (seconds)</label>
+                        <input type="number" step="0.1" name="eye_closure_sec" id="edit_eye_closure_sec" class="form-control">
+                    </div>
+
+                    <div class="form-group col-full">
+                        <label>Resolution Notes</label>
+                        <textarea name="resolution_notes" id="edit_resolution_notes" rows="3" class="form-control"></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL: RESOLVE ALERT -->
+<div class="modal-backdrop" id="resolveAlertModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <div class="modal-title" id="resolveHeaderTitle">Resolve Alert</div>
+            <button type="button" class="btn-icon" onclick="closeResolveModal()">✕</button>
+        </div>
+        <form action="{{ url_for('resolve_alert_route') }}" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="alert_id" id="modalResolveAlertId">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Resolution Summary &amp; Proctor Notes</label>
+                    <textarea name="resolution_notes" rows="4" class="form-control" placeholder="Provide consultation notes or resolution rationale..." required></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeResolveModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Confirm Resolution</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openCreateModal() {
+    document.getElementById("createAlertModal").classList.add("active");
+}
+function closeCreateModal() {
+    document.getElementById("createAlertModal").classList.remove("active");
+}
+
+function openEditModal(id, sid, sessId, devId, type, sev, status, eyeSec, notes) {
+    document.getElementById("edit_alert_id").value = id;
+    document.getElementById("edit_student_id").value = sid;
+    document.getElementById("edit_session_id").value = sessId;
+    document.getElementById("edit_device_id").value = devId;
+    document.getElementById("edit_alert_type").value = type;
+    document.getElementById("edit_severity").value = sev;
+    document.getElementById("edit_status").value = status;
+    document.getElementById("edit_eye_closure_sec").value = eyeSec;
+    document.getElementById("edit_resolution_notes").value = notes;
+    document.getElementById("editModalTitle").textContent = "Update Incident Alert #" + id;
+    document.getElementById("editAlertModal").classList.add("active");
+}
+function closeEditModal() {
+    document.getElementById("editAlertModal").classList.remove("active");
+}
+
+function openResolveModal(id, sname) {
+    document.getElementById("modalResolveAlertId").value = id;
+    document.getElementById("resolveHeaderTitle").textContent = "Resolve Alert #" + id + " (" + sname + ")";
+    document.getElementById("resolveAlertModal").classList.add("active");
+}
+function closeResolveModal() {
+    document.getElementById("resolveAlertModal").classList.remove("active");
+}
+</script>
+{% endblock %}

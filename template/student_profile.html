@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+
+{% block title %}{{ student.student_name }} Dossier • AegisAlert{% endblock %}
+{% block page_title %}Student Proctoring Profile{% endblock %}
+
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:center;">
+    <a href="{{ url_for('students_list') }}" class="btn btn-secondary">
+        ← Back to Student Roster
+    </a>
+    <span class="badge-id">Profile UID: {{ student.student_id }}</span>
+</div>
+
+<div class="kpi-grid">
+    <div class="kpi-card">
+        <div class="kpi-card-header">
+            <span class="kpi-label">Total Logged Incidents</span>
+            <div class="kpi-icon icon-blue">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path></svg>
+            </div>
+        </div>
+        <div class="kpi-number">{{ student.total_alerts }}</div>
+        <div class="kpi-footer">Across all registered lab &amp; theory sessions</div>
+    </div>
+
+    <div class="kpi-card">
+        <div class="kpi-card-header">
+            <span class="kpi-label">High Severity Events</span>
+            <div class="kpi-icon icon-red">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"></polygon></svg>
+            </div>
+        </div>
+        <div class="kpi-number" style="color: #f87171;">{{ student.high_alerts }}</div>
+        <div class="kpi-footer">Prolonged eye closure (&gt; 4.0s)</div>
+    </div>
+
+    <div class="kpi-card">
+        <div class="kpi-card-header">
+            <span class="kpi-label">Pending Action</span>
+            <div class="kpi-icon icon-purple">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            </div>
+        </div>
+        <div class="kpi-number">{{ student.pending_alerts }}</div>
+        <div class="kpi-footer">Awaiting faculty consultation</div>
+    </div>
+
+    <div class="kpi-card">
+        <div class="kpi-card-header">
+            <span class="kpi-label">Avg Eye Closure</span>
+            <div class="kpi-icon icon-green">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle></svg>
+            </div>
+        </div>
+        <div class="kpi-number">{{ student.avg_eye_sec }}s</div>
+        <div class="kpi-footer">IoT eye-tracking duration metric</div>
+    </div>
+</div>
+
+<div class="form-grid">
+    <!-- Student Demographics Card -->
+    <div class="panel-card">
+        <div class="panel-header">
+            <div class="panel-title">Academic Demographics</div>
+            <span class="badge-id">Enrolled: {{ student.enrollment_year }}</span>
+        </div>
+        <div style="display:flex; flex-direction:column; gap: 12px; font-size: 13.5px;">
+            <div style="display:flex; justify-content:space-between; border-bottom: 1px solid var(--border-subtle); padding-bottom: 8px;">
+                <span style="color: var(--text-muted);">Full Name:</span>
+                <span style="font-weight: 600;">{{ student.student_name }}</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; border-bottom: 1px solid var(--border-subtle); padding-bottom: 8px;">
+                <span style="color: var(--text-muted);">Registration ID:</span>
+                <span style="font-family: monospace; font-weight: 600;">{{ student.student_id }}</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; border-bottom: 1px solid var(--border-subtle); padding-bottom: 8px;">
+                <span style="color: var(--text-muted);">Class Section:</span>
+                <span style="font-weight: 600;">Section {{ student.class_section }}</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; border-bottom: 1px solid var(--border-subtle); padding-bottom: 8px;">
+                <span style="color: var(--text-muted);">Department:</span>
+                <span style="font-weight: 600;">{{ student.department }}</span>
+            </div>
+            <div style="display:flex; justify-content:space-between;">
+                <span style="color: var(--text-muted);">Institutional Email:</span>
+                <span style="font-family: monospace; font-size: 12px;">{{ student.email }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Emergency Contact Card -->
+    <div class="panel-card">
+        <div class="panel-header">
+            <div class="panel-title">Emergency Contact (ER Entity)</div>
+            <span style="font-size: 11.5px; color: #34d399;">Referential Integrity Verified</span>
+        </div>
+        {% if student.contact %}
+            <div style="display:flex; flex-direction:column; gap: 12px; font-size: 13.5px;">
+                <div style="display:flex; justify-content:space-between; border-bottom: 1px solid var(--border-subtle); padding-bottom: 8px;">
+                    <span style="color: var(--text-muted);">Guardian / Parent Name:</span>
+                    <span style="font-weight: 600;">{{ student.contact.name }}</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; border-bottom: 1px solid var(--border-subtle); padding-bottom: 8px;">
+                    <span style="color: var(--text-muted);">Relationship:</span>
+                    <span style="font-weight: 600;">{{ student.contact.relationship }}</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; border-bottom: 1px solid var(--border-subtle); padding-bottom: 8px;">
+                    <span style="color: var(--text-muted);">Emergency Phone:</span>
+                    <span style="font-family: monospace; font-weight: 600; color: #60a5fa;">{{ student.contact.phone }}</span>
+                </div>
+                <div style="display:flex; justify-content:space-between;">
+                    <span style="color: var(--text-muted);">Contact Email:</span>
+                    <span style="font-family: monospace; font-size: 12px;">{{ student.contact.email or 'N/A' }}</span>
+                </div>
+            </div>
+        {% else %}
+            <div style="text-align:center; padding: 36px 0; color: var(--text-muted); font-size: 13px;">
+                No emergency contact on file for this candidate.
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Incident Timeline & Evidence Log -->
+<div class="data-section-card">
+    <div class="table-toolbar">
+        <h3 style="font-size: 15px; font-weight: 700;">Chronological Incident Log for {{ student.student_name }}</h3>
+        <span class="badge-id">{{ student.history|length }} Incidents</span>
+    </div>
+
+    <div class="table-responsive">
+        <table class="modern-table">
+            <thead>
+                <tr>
+                    <th>Alert ID</th>
+                    <th>Academic Subject</th>
+                    <th>Room Location</th>
+                    <th>Classification</th>
+                    <th>Severity</th>
+                    <th>Eye Duration</th>
+                    <th>Status</th>
+                    <th>Detected At</th>
+                    <th>Faculty Notes &amp; Consultation</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in student.history %}
+                    <tr>
+                        <td><span class="badge-id">#{{ row.alert_id }}</span></td>
+                        <td><span style="font-weight: 600;">{{ row.subject }}</span></td>
+                        <td>Room {{ row.location }}</td>
+                        <td>{{ row.alert_type }}</td>
+                        <td><span class="severity-pill sev-{{ row.severity | lower }}">{{ row.severity }}</span></td>
+                        <td>
+                            {% if row.eye_closure_sec > 0 %}
+                                <span style="font-family: monospace; font-size: 12px;">{{ row.eye_closure_sec }}s</span>
+                            {% else %}
+                                <span style="color: var(--text-muted);">N/A</span>
+                            {% endif %}
+                        </td>
+                        <td><span class="status-badge st-{{ row.status | lower }}">{{ row.status }}</span></td>
+                        <td style="font-size: 12px; color: var(--text-muted);">{{ row.alert_time }}</td>
+                        <td style="font-size: 12px; color: var(--text-secondary); max-width: 250px;">
+                            {{ row.notes or 'No consultation notes recorded yet.' }}
+                            {% if row.resolved_by %}
+                                <div style="font-size: 10.5px; color: var(--text-muted);">By: {{ row.resolved_by }}</div>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="9" style="text-align: center; padding: 32px 0; color: var(--text-muted);">
+                            No drowsiness or negligence alerts logged for this student. Perfect record!
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

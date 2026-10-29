@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}Audit Trail • AegisAlert{% endblock %}
+{% block page_title %}Security &amp; Database Audit Trail{% endblock %}
+
+{% block content %}
+<div class="data-section-card">
+    <div class="table-toolbar">
+        <div class="filter-pills">
+            <a href="{{ url_for('audit_view', action='all') }}" class="filter-pill {% if current_action == 'all' %}active{% endif %}">All Actions</a>
+            <a href="{{ url_for('audit_view', action='CREATE') }}" class="filter-pill {% if current_action == 'CREATE' %}active{% endif %}">CREATE</a>
+            <a href="{{ url_for('audit_view', action='UPDATE') }}" class="filter-pill {% if current_action == 'UPDATE' %}active{% endif %}">UPDATE</a>
+            <a href="{{ url_for('audit_view', action='RESOLVE') }}" class="filter-pill {% if current_action == 'RESOLVE' %}active{% endif %}">RESOLVE</a>
+            <a href="{{ url_for('audit_view', action='DELETE') }}" class="filter-pill {% if current_action == 'DELETE' %}active{% endif %}">DELETE</a>
+        </div>
+
+        <a href="{{ url_for('export_csv', entity='audit') }}" class="btn btn-secondary">
+            <span>Export Audit CSV</span>
+        </a>
+    </div>
+
+    <div class="table-responsive">
+        <table class="modern-table">
+            <thead>
+                <tr>
+                    <th>Log ID</th>
+                    <th>Action</th>
+                    <th>Target Entity</th>
+                    <th>Record UID</th>
+                    <th>Executed By</th>
+                    <th>Timestamp</th>
+                    <th>Operational Details &amp; State Change</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for l in logs %}
+                    <tr>
+                        <td><span class="badge-id">#{{ l.audit_id }}</span></td>
+                        <td>
+                            <span class="status-badge {% if l.action_type in ('CREATE', 'INSERT_TRIGGER') %}st-resolved{% elif l.action_type == 'DELETE' %}sev-high{% else %}st-acknowledged{% endif %}">
+                                {{ l.action_type }}
+                            </span>
+                        </td>
+                        <td><span style="font-weight: 600;">{{ l.table_name }}</span></td>
+                        <td><span class="badge-id">{{ l.record_id }}</span></td>
+                        <td>
+                            <div style="font-weight: 600; font-size: 12.5px;">{{ l.performed_by }}</div>
+                        </td>
+                        <td style="font-size: 12px; color: var(--text-muted); font-family: monospace;">{{ l.action_time }}</td>
+                        <td style="font-size: 12.5px; color: var(--text-secondary); max-width: 380px;">
+                            {{ l.details }}
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="7" style="text-align: center; padding: 36px 0; color: var(--text-muted);">
+                            No audit log records found for this action filter.
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AegisAlert • Classroom Vision & Drowsiness Monitoring System</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Chart.js via CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+<div class="app-layout">
+
+    <!-- TOP NAVBAR -->
+    <nav class="navbar">
+        <div class="nav-left">
+            <div class="brand-logo">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                    <circle cx="12" cy="11" r="3"/>
+                </svg>
+            </div>
+            <div>
+                <div class="brand-title">AegisAlert <span>v2.0</span></div>
+                <div class="brand-sub">Classroom Vision & Drowsiness Proctoring System • DBMS Assessment-4</div>
+            </div>
+        </div>
+
+        <div class="nav-right">
+            <!-- Database Status Indicator -->
+            <div class="status-chip {% if db_type == 'oracle' %}oracle-mode{% else %}demo-mode{% endif %}" title="Active Database Connection">
+                <span class="pulse-dot"></span>
+                <span>{{ db_label }}</span>
+            </div>
+
+            <!-- Live Simulator Action -->
+            <form action="{{ url_for('simulate_event') }}" method="POST" class="nav-action-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button type="submit" class="btn btn-simulate" title="Create a random sample alert; no live sensor is connected">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                    </svg>
+                    <span>Simulate Event</span>
+                </button>
+            </form>
+
+            <a href="#formSection" class="btn btn-primary" onclick="focusNewAlert()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                <span>New Alert</span>
+            </a>
+        </div>
+    </nav>
+
+
+    <!-- FLASH MESSAGES -->
+    <div class="flash-container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert-toast {{ category }}">
+                        <div class="toast-icon">
+                            {% if category == 'success' %}
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            {% else %}
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                            {% endif %}
+                        </div>
+                        <div class="toast-text">{{ message }}</div>
+                        <button class="toast-close" onclick="this.parentElement.remove()">×</button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% if error %}
+            <div class="alert-toast error">
+                <div class="toast-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                </div>
+                <div class="toast-text"><strong>Database Alert:</strong> {{ error }}</div>
+                <button class="toast-close" onclick="this.parentElement.remove()">×</button>
+            </div>
+        {% endif %}
+    </div>
+
+
+    <main class="dashboard-content">
+
+        <!-- KPI METRICS RIBBON -->
+        <section class="kpi-grid">
+            <!-- Total Alerts Card -->
+            <div class="kpi-card">
+                <div class="kpi-header">
+                    <span class="kpi-label">Total Incidents</span>
+                    <div class="kpi-icon icon-blue">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                    </div>
+                </div>
+                <div class="kpi-value">{{ stats.total }}</div>
+                <div class="kpi-footer">
+                    <span class="trend-badge positive">Active Monitoring</span>
+                    <span class="kpi-note">Across all lecture halls</span>
+                </div>
+            </div>
+
+            <!-- High Severity Card -->
+            <div class="kpi-card">
+                <div class="kpi-header">
+                    <span class="kpi-label">High Severity</span>
+                    <div class="kpi-icon icon-red">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"></polygon><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                    </div>
+                </div>
+                <div class="kpi-value text-red">{{ stats.high }}</div>
+                <div class="kpi-footer">
+                    <span class="trend-badge negative">Critical Risk</span>
+                    <span class="kpi-note">{% if stats.total > 0 %}{{ ((stats.high / stats.total) * 100) | round(1) }}% of total{% else %}0%{% endif %}</span>
+                </div>
+            </div>
+
+            <!-- Drowsiness vs Negligence -->
+            <div class="kpi-card">
+                <div class="kpi-header">
+                    <span class="kpi-label">Behavior Breakdown</span>
+                    <div class="kpi-icon icon-purple">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12h5l3 8 4-16 3 8h5"></path></svg>
+                    </div>
+                </div>
+                <div class="kpi-split-value">
+                    <div>
+                        <span class="dot-indicator dot-indigo"></span>
+                        <span class="split-count">{{ stats.drowsiness }}</span>
+                        <span class="split-label">Drowsy</span>
+                    </div>
+                    <div class="split-divider">/</div>
+                    <div>
+                        <span class="dot-indicator dot-amber"></span>
+                        <span class="split-count">{{ stats.negligence }}</span>
+                        <span class="split-label">Negligent</span>
+                    </div>
+                </div>
+                <div class="kpi-footer">
+                    <span class="kpi-note">AI Sensor Classifications</span>
+                </div>
+            </div>
+
+            <!-- Active Sensors Card -->
+            <div class="kpi-card">
+                <div class="kpi-header">
+                    <span class="kpi-label">Active Sensors</span>
+                    <div class="kpi-icon icon-green">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                    </div>
+                </div>
+                <div class="kpi-value">{{ stats.active_devices }} <span class="kpi-sub-total">/ {{ devices|length }}</span></div>
+                <div class="kpi-footer">
+                    <span class="trend-badge green">Online</span>
+                    <span class="kpi-note">Rooms PRP353 &amp; SJT101</span>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ANALYTICS CHARTS SECTION -->
+        <section class="charts-grid">
+            <div class="chart-card">
+                <div class="card-header">
+                    <div>
+                        <h3 class="card-title">Incident Type Distribution</h3>
+                        <p class="card-desc">Comparison of detected Drowsiness vs. Classroom Negligence</p>
+                    </div>
+                </div>
+                <div class="chart-container-donut">
+                    <canvas id="typeChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-card">
+                <div class="card-header">
+                    <div>
+                        <h3 class="card-title">Incident Severity Breakdown</h3>
+                        <p class="card-desc">Volume of incidents categorized by criticality level</p>
+                    </div>
+                </div>
+                <div class="chart-container-bar">
+                    <canvas id="severityChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ADD / EDIT ALERT FORM SECTION -->
+        <section class="section-container" id="formSection">
+            <div class="form-card">
+                <div class="form-card-header">
+                    <div>
+                        <div class="form-badge" id="formStateBadge">Create New Alert</div>
+                        <h2 class="card-title" id="formTitle">Record Classroom Incident</h2>
+                        <p class="card-desc">Input alert telemetry or select a row in the table below to edit.</p>
+                    </div>
+                    <button type="button" class="btn btn-ghost" id="cancelEditBtn" style="display: none;" onclick="resetToCreateMode()">
+                        ✕ Cancel Editing
+                    </button>
+                </div>
+
+                <form id="alertForm" method="POST" action="{{ url_for('add_record') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <div class="form-grid">
+
+                        <!-- Alert ID -->
+                        <div class="input-group">
+                            <label for="alert_id">
+                                Alert ID
+                                <span class="help-tooltip" title="Unique primary key for this incident">?</span>
+                            </label>
+                            <input
+                                type="number"
+                                name="alert_id"
+                                id="alert_id"
+                                value="{{ next_alert_id }}"
+                                placeholder="e.g. 101"
+                                required>
+                        </div>
+
+                        <!-- Student Foreign Key Dropdown -->
+                        <div class="input-group">
+                            <label for="student_id">Student (Foreign Key)</label>
+                            <select name="student_id" id="student_id" required>
+                                <option value="" disabled selected>Select student...</option>
+                                {% for s in students %}
+                                    <option value="{{ s.id }}">
+                                        {{ s.name }} ({{ s.id }} - Sec {{ s.section }})
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Session Foreign Key Dropdown -->
+                        <div class="input-group">
+                            <label for="session_id">Academic Session (Foreign Key)</label>
+                            <select name="session_id" id="session_id" required>
+                                <option value="" disabled selected>Select session...</option>
+                                {% for sess in sessions %}
+                                    <option value="{{ sess.id }}">
+                                        {{ sess.subject }} - {{ sess.faculty }} (Sec {{ sess.section }})
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Device Foreign Key Dropdown -->
+                        <div class="input-group">
+                            <label for="device_id">Capture Device (Foreign Key)</label>
+                            <select name="device_id" id="device_id" required>
+                                <option value="" disabled selected>Select device...</option>
+                                {% for d in devices %}
+                                    <option value="{{ d.id }}">
+                                        {{ d.type }} #{{ d.id }} - Room {{ d.location }} ({{ d.status }})
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Alert Type -->
+                        <div class="input-group">
+                            <label for="alert_type">Alert Type</label>
+                            <select name="alert_type" id="alert_type" required>
+                                <option value="" disabled selected>Select category...</option>
+                                <option value="Drowsiness">😴 Drowsiness (Eye Closure / Head Nod)</option>
+                                <option value="Negligence">📱 Negligence (Distraction / Inattention)</option>
+                            </select>
+                        </div>
+
+                        <!-- Severity -->
+                        <div class="input-group">
+                            <label for="severity">Severity Level</label>
+                            <select name="severity" id="severity" required>
+                                <option value="" disabled selected>Select severity...</option>
+                                <option value="Low">🟢 Low (Brief Lapse &lt; 5s)</option>
+                                <option value="Medium">🟡 Medium (Repeated Inattention)</option>
+                                <option value="High">🔴 High (Sustained Sleep / Absent)</option>
+                            </select>
+                        </div>
+
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary" id="submitBtn">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                            <span id="submitBtnText">Record Incident Alert</span>
+                        </button>
+
+                        <button type="submit" class="btn btn-purple" id="updateBtn" formaction="{{ url_for('update_record') }}" style="display: none;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                            <span>Save Changes</span>
+                        </button>
+
+                        <button type="button" class="btn btn-secondary" onclick="resetForm()">
+                            Clear Form
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+
+        <!-- ALERTS DATA TABLE SECTION -->
+        <section class="section-container">
+            <div class="table-card">
+
+                <!-- Table Controls Header -->
+                <div class="table-toolbar">
+                    <div class="toolbar-left">
+                        <h2 class="card-title">Live Incident Log</h2>
+                        <span class="badge-count" id="tableRecordCount">{{ alerts|length }} Records</span>
+                    </div>
+
+                    <div class="toolbar-center">
+                        <div class="filter-tabs">
+                            <button type="button" class="tab-btn active" data-filter="all" onclick="filterTable('all', this)">All Incidents</button>
+                            <button type="button" class="tab-btn" data-filter="High" onclick="filterTable('High', this)">🚨 High Risk</button>
+                            <button type="button" class="tab-btn" data-filter="Drowsiness" onclick="filterTable('Drowsiness', this)">😴 Drowsiness</button>
+                            <button type="button" class="tab-btn" data-filter="Negligence" onclick="filterTable('Negligence', this)">📱 Negligence</button>
+                        </div>
+                    </div>
+
+                    <div class="toolbar-right">
+                        <div class="search-input-wrapper">
+                            <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                            <input
+                                type="text"
+                                id="liveSearchInput"
+                                placeholder="Search student, room, subject..."
+                                onkeyup="handleLiveSearch()">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Table Content -->
+                <div class="table-responsive">
+                    <table class="modern-table" id="alertsTable">
+                        <thead>
+                            <tr>
+                                <th>Incident ID</th>
+                                <th>Student Details</th>
+                                <th>Academic Session</th>
+                                <th>Sensor &amp; Location</th>
+                                <th>Behavior Classification</th>
+                                <th>Risk Severity</th>
+                                <th>Detected At</th>
+                                <th class="text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for row in alerts %}
+                            <tr class="alert-row"
+                                data-type="{{ row.alert_type }}"
+                                data-severity="{{ row.severity }}"
+                                data-student="{{ row.student_name }} {{ row.student_id }}"
+                                data-subject="{{ row.subject }}"
+                                data-location="{{ row.location }}">
+
+                                <!-- ID -->
+                                <td class="col-id">
+                                    <span class="id-pill">#{{ row.alert_id }}</span>
+                                </td>
+
+                                <!-- Student -->
+                                <td>
+                                    <div class="user-chip">
+                                        <div class="user-avatar" style="background: {{ row.student_id | avatar_color }};">
+                                            {{ row.student_name[:1] }}
+                                        </div>
+                                        <div>
+                                            <div class="user-name">{{ row.student_name }}</div>
+                                            <div class="user-sub">{{ row.student_id }}</div>
+                                        </div>
+                                    </div>
+                                </td>
+
+                                <!-- Session -->
+                                <td>
+                                    <div class="session-name">{{ row.subject }}</div>
+                                    <div class="session-sub">{{ row.faculty }}</div>
+                                </td>
+
+                                <!-- Device -->
+                                <td>
+                                    <div class="device-cell">
+                                        <span class="device-icon">
+                                            {% if 'Camera' in row.device_type %}📷{% elif 'IR' in row.device_type %}📡{% else %}⏱{% endif %}
+                                        </span>
+                                        <div>
+                                            <div class="device-type">{{ row.device_type }} #{{ row.device_id }}</div>
+                                            <div class="device-room">Room {{ row.location }}</div>
+                                        </div>
+                                    </div>
+                                </td>
+
+                                <!-- Type -->
+                                <td>
+                                    <span class="type-badge {% if row.alert_type == 'Drowsiness' %}type-drowsy{% else %}type-negligent{% endif %}">
+                                        {% if row.alert_type == 'Drowsiness' %}😴 Drowsiness{% else %}📱 Negligence{% endif %}
+                                    </span>
+                                </td>
+
+                                <!-- Severity -->
+                                <td>
+                                    <span class="severity-badge severity-{{ row.severity | lower }}">
+                                        <span class="sev-dot"></span>
+                                        {{ row.severity }}
+                                    </span>
+                                </td>
+
+                                <!-- Time -->
+                                <td class="col-time">
+                                    <div class="time-main">{{ row.alert_time }}</div>
+                                </td>
+
+                                <!-- Actions -->
+                                <td class="col-actions text-right">
+                                    <button
+                                        type="button"
+                                        class="action-btn edit-btn"
+                                        title="Edit this incident"
+                                        onclick="editRecord(
+                                            '{{ row.alert_id }}',
+                                            '{{ row.student_id }}',
+                                            '{{ row.session_id }}',
+                                            '{{ row.device_id }}',
+                                            '{{ row.alert_type }}',
+                                            '{{ row.severity }}'
+                                        )">
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                                    </button>
+
+                                    <form action="{{ url_for('delete_record') }}" method="POST" style="display:inline">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                        <input type="hidden" name="alert_id" value="{{ row.alert_id }}">
+                                        <button
+                                            type="submit"
+                                            class="action-btn delete-btn"
+                                            title="Delete incident"
+                                            onclick="return confirm('Delete Alert #{{ row.alert_id }} for {{ row.student_name }}?');">
+                                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        {% else %}
+                            <tr id="emptyTableRow">
+                                <td colspan="8" class="empty-state">
+                                    <div class="empty-icon">📭</div>
+                                    <div class="empty-title">No Incident Records Found</div>
+                                    <div class="empty-sub">Use the form above or click "Simulate Event" to add a new alert.</div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+        </section>
+
+    </main>
+
+
+    <!-- FOOTER -->
+    <footer class="app-footer">
+        <div>
+            <strong>Student Drowsiness &amp; Negligence Alert System</strong> • Assessment-4 (DBMS Lab)
+        </div>
+        <div class="footer-meta">
+            Demo candidate • Reg No: <strong>STU001</strong> • Section: <strong>A1</strong>
+        </div>
+    </footer>
+
+</div>
+
+
+<!-- JAVASCRIPT LOGIC & CHARTS -->
+<script>
+// ================= CHARTS INITIALIZATION =================
+document.addEventListener("DOMContentLoaded", function() {
+    const drowsinessCount = {{ stats.drowsiness }};
+    const negligenceCount = {{ stats.negligence }};
+    const highCount = {{ stats.high }};
+    const medCount = {{ stats.medium }};
+    const lowCount = {{ stats.low }};
+
+    // 1. Donut Chart - Incident Types
+    const ctxType = document.getElementById("typeChart").getContext("2d");
+    new Chart(ctxType, {
+        type: "doughnut",
+        data: {
+            labels: ["Drowsiness", "Negligence"],
+            datasets: [{
+                data: [drowsinessCount, negligenceCount],
+                backgroundColor: ["#6366f1", "#f59e0b"],
+                borderWidth: 0,
+                hoverOffset: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: "bottom",
+                    labels: {
+                        boxWidth: 12,
+                        padding: 16,
+                        font: { family: "'Inter', sans-serif", size: 12, weight: 600 },
+                        color: "#475569"
+                    }
+                }
+            },
+            cutout: "68%"
+        }
+    });
+
+    // 2. Bar Chart - Severity Breakdown
+    const ctxSev = document.getElementById("severityChart").getContext("2d");
+    new Chart(ctxSev, {
+        type: "bar",
+        data: {
+            labels: ["High Risk", "Medium Risk", "Low Risk"],
+            datasets: [{
+                label: "Incidents",
+                data: [highCount, medCount, lowCount],
+                backgroundColor: ["#f43f5e", "#f59e0b", "#10b981"],
+                borderRadius: 6,
+                barThickness: 28
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { precision: 0, color: "#94a3b8" },
+                    grid: { color: "#f1f5f9" }
+                },
+                x: {
+                    ticks: {
+                        font: { family: "'Inter', sans-serif", size: 11, weight: 600 },
+                        color: "#475569"
+                    },
+                    grid: { display: false }
+                }
+            }
+        }
+    });
+});
+
+
+// ================= EDIT MODE / FORM HELPERS =================
+
+function editRecord(id, studentId, sessionId, deviceId, type, severity) {
+    document.getElementById("alert_id").value = id;
+    document.getElementById("student_id").value = studentId;
+    document.getElementById("session_id").value = sessionId;
+    document.getElementById("device_id").value = deviceId;
+    document.getElementById("alert_type").value = type;
+    document.getElementById("severity").value = severity;
+
+    // Switch UI to Edit Mode
+    document.getElementById("formStateBadge").textContent = "Editing Alert #" + id;
+    document.getElementById("formStateBadge").classList.add("badge-edit-mode");
+    document.getElementById("formTitle").textContent = "Update Incident #" + id;
+    document.getElementById("submitBtn").style.display = "none";
+    document.getElementById("updateBtn").style.display = "inline-flex";
+    document.getElementById("cancelEditBtn").style.display = "inline-flex";
+
+    // Smooth scroll to form
+    document.getElementById("formSection").scrollIntoView({ behavior: "smooth" });
+}
+
+function resetToCreateMode() {
+    document.getElementById("alertForm").reset();
+    document.getElementById("alert_id").value = {{ next_alert_id }};
+    document.getElementById("formStateBadge").textContent = "Create New Alert";
+    document.getElementById("formStateBadge").classList.remove("badge-edit-mode");
+    document.getElementById("formTitle").textContent = "Record Classroom Incident";
+    document.getElementById("submitBtn").style.display = "inline-flex";
+    document.getElementById("updateBtn").style.display = "none";
+    document.getElementById("cancelEditBtn").style.display = "none";
+}
+
+function resetForm() {
+    resetToCreateMode();
+}
+
+function focusNewAlert() {
+    resetToCreateMode();
+    document.getElementById("formSection").scrollIntoView({ behavior: "smooth" });
+    document.getElementById("student_id").focus();
+}
+
+
+// ================= LIVE CLIENT SEARCH & FILTERING =================
+
+let currentFilter = "all";
+
+function filterTable(filter, buttonElement) {
+    currentFilter = filter;
+
+    // Update active tab style
+    document.querySelectorAll(".tab-btn").forEach(btn => btn.classList.remove("active"));
+    if (buttonElement) {
+        buttonElement.classList.add("active");
+    }
+
+    applyFilters();
+}
+
+function handleLiveSearch() {
+    applyFilters();
+}
+
+function applyFilters() {
+    const query = document.getElementById("liveSearchInput").value.toLowerCase().trim();
+    const rows = document.querySelectorAll(".alert-row");
+    let visibleCount = 0;
+
+    rows.forEach(row => {
+        const type = row.getAttribute("data-type") || "";
+        const severity = row.getAttribute("data-severity") || "";
+        const student = (row.getAttribute("data-student") || "").toLowerCase();
+        const subject = (row.getAttribute("data-subject") || "").toLowerCase();
+        const location = (row.getAttribute("data-location") || "").toLowerCase();
+        const textContent = row.textContent.toLowerCase();
+
+        // 1. Check Tab Filter
+        let matchesFilter = false;
+        if (currentFilter === "all") {
+            matchesFilter = true;
+        } else if (currentFilter === "High" && severity === "High") {
+            matchesFilter = true;
+        } else if (currentFilter === type) {
+            matchesFilter = true;
+        }
+
+        // 2. Check Search Query
+        let matchesQuery = true;
+        if (query) {
+            matchesQuery = textContent.includes(query) || student.includes(query) || subject.includes(query) || location.includes(query);
+        }
+
+        if (matchesFilter && matchesQuery) {
+            row.style.display = "";
+            visibleCount++;
+        } else {
+            row.style.display = "none";
+        }
+    });
+
+    document.getElementById("tableRecordCount").textContent = visibleCount + " Records";
+}
+
+// Fade out toasts after 4 seconds
+setTimeout(function() {
+    document.querySelectorAll(".alert-toast").forEach(el => {
+        el.style.opacity = "0";
+        setTimeout(() => el.remove(), 400);
+    });
+}, 4500);
+</script>
+
+</body>
+</html>

@@ -1,0 +1,24 @@
+# Local secrets and environment configuration
+.env
+.env.*
+!.env.example
+
+# Local databases and backups
+*.db
+*.sqlite
+*.sqlite3
+*.db-*
+
+# Python environments and generated files
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+
+# Local archives and preserved old copies
+*.zip
+_backup_original/
+
+# Editor and operating-system files
+.DS_Store
+.vscode/

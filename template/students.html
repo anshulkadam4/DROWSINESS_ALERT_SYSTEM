@@ -1,0 +1,300 @@
+{% extends "base.html" %}
+
+{% block title %}Students • AegisAlert{% endblock %}
+{% block page_title %}Student Roster &amp; Profiles{% endblock %}
+
+{% block content %}
+<div class="data-section-card">
+    <!-- Toolbar -->
+    <div class="table-toolbar">
+        <div style="display:flex; align-items:center; gap: 8px;">
+            <a href="{{ url_for('students_list', section='all') }}" class="filter-pill {% if current_section == 'all' %}active{% endif %}">All Sections</a>
+            <a href="{{ url_for('students_list', section='A1') }}" class="filter-pill {% if current_section == 'A1' %}active{% endif %}">Sec A1</a>
+            <a href="{{ url_for('students_list', section='B2') }}" class="filter-pill {% if current_section == 'B2' %}active{% endif %}">Sec B2</a>
+        </div>
+
+        <div style="display:flex; align-items:center; gap: 10px;">
+            <form action="{{ url_for('students_list') }}" method="GET" class="search-box">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <input type="text" name="q" value="{{ search_query }}" placeholder="Search student name or reg no...">
+            </form>
+
+            <button type="button" class="btn btn-secondary" onclick="openCsvModal()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                <span>Import CSV</span>
+            </button>
+
+            <a href="{{ url_for('export_csv', entity='students') }}" class="btn btn-secondary">
+                <span>Export CSV</span>
+            </a>
+
+            <button type="button" class="btn btn-primary" onclick="openAddStudentModal()">
+                + Enroll Student
+            </button>
+        </div>
+    </div>
+
+    <!-- Student Table -->
+    <div class="table-responsive">
+        <table class="modern-table">
+            <thead>
+                <tr>
+                    <th>Reg Number</th>
+                    <th>Student Name</th>
+                    <th>Section</th>
+                    <th>Department</th>
+                    <th>Institutional Email</th>
+                    <th>Total Incidents</th>
+                    <th>Risk Pattern</th>
+                    <th style="text-align: right;">Profile &amp; Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in students %}
+                    <tr>
+                        <td><span class="badge-id">{{ s.student_id }}</span></td>
+                        <td>
+                            <div class="student-chip">
+                                <div class="avatar" style="background: {{ s.student_id | avatar_color }};">
+                                    {{ s.student_name | initials }}
+                                </div>
+                                <div style="font-weight: 600;">{{ s.student_name }}</div>
+                            </div>
+                        </td>
+                        <td><span style="font-weight: 600;">Sec {{ s.class_section }}</span></td>
+                        <td>{{ s.department }}</td>
+                        <td style="font-family: monospace; font-size: 12px; color: var(--text-muted);">{{ s.email }}</td>
+                        <td>
+                            <span style="font-weight: 700; color: {% if s.total_alerts >= 3 %}#f87171{% elif s.total_alerts > 0 %}#fbbf24{% else %}#34d399{% endif %};">
+                                {{ s.total_alerts }} {% if s.high_alerts > 0 %}({{ s.high_alerts }} High){% endif %}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge-trend {% if s.risk_class == 'risk-high' %}trend-high{% elif s.risk_class == 'risk-medium' %}trend-amber{% else %}trend-positive{% endif %}">
+                                {{ s.risk_tier }}
+                            </span>
+                        </td>
+                        <td style="text-align: right;">
+                            <div style="display:inline-flex; gap: 8px;">
+                                <a href="{{ url_for('student_profile', student_id=s.student_id) }}" class="btn btn-secondary" style="padding: 4px 10px; font-size: 11.5px;">
+                                    View Dossier →
+                                </a>
+
+                                <button type="button" class="btn-icon" style="width:28px; height:28px;" title="Edit Student" onclick="openEditStudentModal(
+                                    '{{ s.student_id }}',
+                                    '{{ s.student_name }}',
+                                    '{{ s.class_section }}',
+                                    '{{ s.email }}',
+                                    '{{ s.enrollment_year }}',
+                                    '{{ s.department }}'
+                                )">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                                </button>
+
+                                <form action="{{ url_for('delete_student_route') }}" method="POST" style="display:inline;" onsubmit="return confirm('Remove student {{ s.student_name }} ({{ s.student_id }}) and all related records?');">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                    <input type="hidden" name="student_id" value="{{ s.student_id }}">
+                                    <button type="submit" class="btn-icon" style="width:28px; height:28px; color: #f87171;" title="Delete">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="8" style="text-align: center; padding: 36px 0; color: var(--text-muted);">
+                            No students found matching current search or section filter.
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- MODAL: ADD STUDENT -->
+<div class="modal-backdrop" id="addStudentModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <div class="modal-title">Enroll New Student</div>
+            <button type="button" class="btn-icon" onclick="closeAddStudentModal()">✕</button>
+        </div>
+        <form action="{{ url_for('create_student_route') }}" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <div class="modal-body">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Registration Number (PK)</label>
+                        <input type="text" name="student_id" placeholder="e.g. STU008" class="form-control" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Student Full Name</label>
+                        <input type="text" name="student_name" placeholder="e.g. Jamie Sample" class="form-control" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Class Section</label>
+                        <input type="text" name="class_section" placeholder="e.g. A1, B2" class="form-control" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Enrollment Year</label>
+                        <input type="number" name="enrollment_year" value="2025" min="2020" max="2030" class="form-control" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Department / Discipline</label>
+                        <select name="department" class="form-control">
+                            <option value="CSE" selected>Computer Science &amp; Engineering</option>
+                            <option value="Data Science">Data Science</option>
+                            <option value="Cyber Security">Cyber Security</option>
+                            <option value="Information Tech">Information Technology</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Email Address</label>
+                        <input type="email" name="email" placeholder="e.g. student@example.com" class="form-control" required>
+                    </div>
+
+                    <div class="form-group col-full">
+                        <hr style="border: none; border-top: 1px solid var(--border-color); margin: 6px 0;">
+                        <span style="font-size: 11.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Emergency Contact Information</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Contact Name</label>
+                        <input type="text" name="contact_name" placeholder="e.g. Guardian One" class="form-control">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Relationship</label>
+                        <input type="text" name="contact_rel" placeholder="e.g. Parent (Father)" class="form-control">
+                    </div>
+
+                    <div class="form-group col-full">
+                        <label>Emergency Phone Number</label>
+                        <input type="tel" name="contact_phone" placeholder="e.g. 000-000-0001" class="form-control">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeAddStudentModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Enroll Student</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL: EDIT STUDENT -->
+<div class="modal-backdrop" id="editStudentModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <div class="modal-title" id="editStudentTitle">Edit Student Profile</div>
+            <button type="button" class="btn-icon" onclick="closeEditStudentModal()">✕</button>
+        </div>
+        <form action="{{ url_for('update_student_route') }}" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="student_id" id="edit_st_id">
+            <div class="modal-body">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Student Full Name</label>
+                        <input type="text" name="student_name" id="edit_st_name" class="form-control" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Class Section</label>
+                        <input type="text" name="class_section" id="edit_st_sec" class="form-control" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Department</label>
+                        <input type="text" name="department" id="edit_st_dept" class="form-control" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Enrollment Year</label>
+                        <input type="number" name="enrollment_year" id="edit_st_year" class="form-control" required>
+                    </div>
+
+                    <div class="form-group col-full">
+                        <label>Email Address</label>
+                        <input type="email" name="email" id="edit_st_mail" class="form-control" required>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeEditStudentModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL: CSV BULK IMPORT -->
+<div class="modal-backdrop" id="csvModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <div class="modal-title">Bulk Import Students via CSV</div>
+            <button type="button" class="btn-icon" onclick="closeCsvModal()">✕</button>
+        </div>
+        <form action="{{ url_for('import_students_csv_route') }}" method="POST" enctype="multipart/form-data">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <div class="modal-body">
+                <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 14px;">
+                    Upload a CSV file with student demographics. Existing registration numbers will be skipped to protect integrity.
+                </p>
+
+                <div style="background-color: var(--bg-card-subtle); padding: 12px; border-radius: var(--radius-md); font-family: monospace; font-size: 11.5px; margin-bottom: 16px;">
+                    <strong>Required Columns:</strong><br>
+                    student_id, student_name, class_section, email, enrollment_year, department
+                </div>
+
+                <div class="form-group">
+                    <label>Choose CSV File</label>
+                    <input type="file" name="csv_file" accept=".csv" class="form-control" required>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeCsvModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Start Import</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openAddStudentModal() {
+    document.getElementById("addStudentModal").classList.add("active");
+}
+function closeAddStudentModal() {
+    document.getElementById("addStudentModal").classList.remove("active");
+}
+
+function openEditStudentModal(id, name, sec, email, year, dept) {
+    document.getElementById("edit_st_id").value = id;
+    document.getElementById("edit_st_name").value = name;
+    document.getElementById("edit_st_sec").value = sec;
+    document.getElementById("edit_st_mail").value = email;
+    document.getElementById("edit_st_year").value = year;
+    document.getElementById("edit_st_dept").value = dept;
+    document.getElementById("editStudentTitle").textContent = "Edit " + name + " (" + id + ")";
+    document.getElementById("editStudentModal").classList.add("active");
+}
+function closeEditStudentModal() {
+    document.getElementById("editStudentModal").classList.remove("active");
+}
+
+function openCsvModal() {
+    document.getElementById("csvModal").classList.add("active");
+}
+function closeCsvModal() {
+    document.getElementById("csvModal").classList.remove("active");
+}
+</script>
+{% endblock %}

@@ -1,0 +1,528 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard • AegisAlert Student Proctoring{% endblock %}
+{% block page_title %}Security Operations Center{% endblock %}
+
+{% block content %}
+<!-- HERO TELEMETRY RIBBON (Inspired by Screenshot) -->
+<section class="hero-telemetry-row">
+    <div class="hero-header">
+        <div class="hero-title-group">
+            <h1>Active Incident Telemetry</h1>
+            <p>Real-time classroom sensor telemetry & inattention classification</p>
+        </div>
+        <div class="hero-actions">
+            <a href="{{ url_for('export_csv', entity='alerts') }}" class="btn btn-secondary">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                <span>Export Telemetry</span>
+            </a>
+            <button type="button" class="btn btn-primary" onclick="openNewAlertModal()">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                <span>New Incident</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- 4 Context Cards (Matching Reference Screenshot) -->
+    <div class="telemetry-cards-grid">
+        <div class="tele-card">
+            <div class="tele-card-header">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                <span>Active Candidate</span>
+            </div>
+            <div class="tele-card-val">
+                {% if alerts %}
+                    {{ alerts[0].student_name }} ({{ alerts[0].student_id }})
+                {% else %}
+                    No Active Alert
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="tele-card">
+            <div class="tele-card-header">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+                <span>Detection Category</span>
+            </div>
+            <div class="tele-card-val">
+                {% if alerts %}
+                    {{ alerts[0].alert_type }} • {{ alerts[0].severity }} Risk
+                {% else %}
+                    System Nominal
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="tele-card">
+            <div class="tele-card-header">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
+                <span>Source Node / Room</span>
+            </div>
+            <div class="tele-card-val">
+                {% if alerts %}
+                    Room {{ alerts[0].location }} ({{ alerts[0].device_type }})
+                {% else %}
+                    All Nodes Ready
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="tele-card">
+            <div class="tele-card-header">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                <span>Recorded Signal (Demo Data)</span>
+            </div>
+            <div class="tele-card-val" style="color: #34d399;">
+                {% if alerts and alerts[0].eye_closure_sec > 0 %}
+                    {{ alerts[0].eye_closure_sec }}s eye closure
+                {% else %}
+                    No eye-closure value
+                {% endif %}
+            </div>
+            <div style="font-size: 11px; color: var(--text-muted);">No AI model is connected; values are sample/demo telemetry.</div>
+        </div>
+    </div>
+</section>
+
+
+<!-- INCIDENT TIMELINE WIDGET (Horizontal Visual Chronology from Screenshot) -->
+<section class="timeline-widget-card">
+    <div class="timeline-card-title">
+        <h3>Chronological Incident Timeline</h3>
+        <span style="font-size: 12px; color: var(--text-muted);">Real-time stream of detected classroom events</span>
+    </div>
+
+    <div class="timeline-scale-container">
+        <div class="timeline-track-bar">
+            {% for item in stats.timeline %}
+                <div class="timeline-node-pin" style="left: {{ 10 + (loop.index0 * 16) }}%;">
+                    <div class="timeline-pin-bubble pin-severity-{{ item.severity | lower }}">
+                        <span class="pin-title">{{ item.student_name }}</span>
+                        <span class="pin-sub">{{ item.alert_type }} • {{ item.location }} ({{ item.alert_time[11:16] }})</span>
+                    </div>
+                </div>
+            {% else %}
+                <div style="text-align:center; padding: 20px 0; color: var(--text-muted); font-size: 13px;">No recent incidents recorded in current timeline.</div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+
+<!-- KPI EXECUTIVE METRICS -->
+<section class="kpi-grid">
+    <!-- Total Incidents -->
+    <div class="kpi-card">
+        <div class="kpi-card-header">
+            <span class="kpi-label">Total Incidents</span>
+            <div class="kpi-icon icon-blue">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+            </div>
+        </div>
+        <div class="kpi-number">{{ stats.total_alerts }}</div>
+        <div class="kpi-footer">
+            <span class="badge-trend trend-positive">Active Monitoring</span>
+            <span>Across all lecture halls</span>
+        </div>
+    </div>
+
+    <!-- High Risk / Critical -->
+    <div class="kpi-card">
+        <div class="kpi-card-header">
+            <span class="kpi-label">Critical &amp; High Risk</span>
+            <div class="kpi-icon icon-red">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"></polygon><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+            </div>
+        </div>
+        <div class="kpi-number" style="color: #f87171;">{{ stats.high }}</div>
+        <div class="kpi-footer">
+            <span class="badge-trend trend-high">Requires Attention</span>
+            <span>{% if stats.total_alerts > 0 %}{{ ((stats.high / stats.total_alerts) * 100) | round(1) }}% of total{% else %}0%{% endif %}</span>
+        </div>
+    </div>
+
+    <!-- Behavior Breakdown -->
+    <div class="kpi-card">
+        <div class="kpi-card-header">
+            <span class="kpi-label">Behavior Breakdown</span>
+            <div class="kpi-icon icon-purple">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
+            </div>
+        </div>
+        <div class="kpi-number">
+            <span style="color: #a78bfa;">{{ stats.drowsiness }}</span> <span style="font-size: 16px; color: var(--text-muted);">/</span> <span style="color: #fbbf24;">{{ stats.negligence }}</span>
+        </div>
+        <div class="kpi-footer">
+            <span class="badge-trend trend-amber">😴 Drowsy</span>
+            <span>📱 Negligent</span>
+        </div>
+    </div>
+
+    <!-- Active Sensors -->
+    <div class="kpi-card">
+        <div class="kpi-card-header">
+            <span class="kpi-label">Active Sensors &amp; Nodes</span>
+            <div class="kpi-icon icon-green">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+            </div>
+        </div>
+        <div class="kpi-number">{{ stats.active_devices }} <span style="font-size: 16px; color: var(--text-muted);">/ {{ stats.total_devices }}</span></div>
+        <div class="kpi-footer">
+            <span class="badge-trend trend-positive">Telemetry Online</span>
+            <span>Rooms PRP353 &amp; SJT101</span>
+        </div>
+    </div>
+</section>
+
+
+<!-- LOWER DASHBOARD GRID (Rapid Review + Density Chart + Trend Area Chart) -->
+<section class="lower-dashboard-grid">
+    <!-- Panel 1: Suggested Actions / Rapid Review -->
+    <div class="panel-card">
+        <div class="panel-header">
+            <div class="panel-title">AI Suggested Actions</div>
+            <span style="font-size: 11.5px; color: var(--text-muted);">Unresolved queue</span>
+        </div>
+
+        <div class="rapid-action-list">
+            {% set pending_found = false %}
+            {% for item in alerts if item.status != 'Resolved' %}
+                {% if loop.index <= 4 %}
+                    {% set pending_found = true %}
+                    <div class="rapid-action-item">
+                        <div class="rapid-action-meta">
+                            <div class="act-name">{{ item.student_name }}</div>
+                            <div class="act-sub">{{ item.alert_type }} ({{ item.severity }}) • {{ item.subject }}</div>
+                        </div>
+                        <div class="rapid-buttons">
+                            {% if item.status == 'Pending' %}
+                                <form action="{{ url_for('acknowledge_alert_route') }}" method="POST" style="display:inline;">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                    <input type="hidden" name="alert_id" value="{{ item.alert_id }}">
+                                    <button type="submit" class="btn-pill-action btn-pill-reject" title="Acknowledge">Ack</button>
+                                </form>
+                            {% endif %}
+                            <button type="button" class="btn-pill-action btn-pill-approve" onclick="openResolveModal('{{ item.alert_id }}', '{{ item.student_name }}')">
+                                Resolve
+                            </button>
+                        </div>
+                    </div>
+                {% endif %}
+            {% endfor %}
+
+            {% if not pending_found %}
+                <div style="text-align: center; padding: 24px 0; color: var(--text-muted); font-size: 13px;">
+                    ✅ All incidents have been reviewed and resolved!
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Panel 2: Peak Incident Times Chart -->
+    <div class="panel-card">
+        <div class="panel-header">
+            <div class="panel-title">Hourly Incident Density</div>
+            <span style="font-size: 11.5px; color: var(--text-muted);">Recorded alerts, 09:00–16:00</span>
+        </div>
+        <div class="chart-wrapper">
+            <canvas id="densityChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Panel 3: Trend Detection (Purple Flow Gradient Chart) -->
+    <div class="panel-card">
+        <div class="panel-header">
+            <div class="panel-title">Risk Detection Trend</div>
+            <span style="font-size: 11.5px; color: var(--text-muted); font-weight: 600;">
+                {% if stats.trend_counts | sum == 0 %}No alerts in this period{% else %}Stored alert timestamps • last 7 days{% endif %}
+            </span>
+        </div>
+        <div class="chart-wrapper">
+            <canvas id="trendChart"></canvas>
+        </div>
+    </div>
+</section>
+
+
+<!-- LIVE INCIDENT LOG TABLE -->
+<section class="data-section-card">
+    <div class="table-toolbar">
+        <div style="display:flex; align-items:center; gap: 12px;">
+            <h2 style="font-size: 15.5px; font-weight: 700;">Live Incident Stream</h2>
+            <span class="badge-id">{{ alerts|length }} Records</span>
+        </div>
+
+        <div class="filter-pills">
+            <a href="{{ url_for('alerts_list') }}" class="filter-pill active">View All in Smart Alerts →</a>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="modern-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Student Candidate</th>
+                    <th>Academic Session</th>
+                    <th>Sensor &amp; Location</th>
+                    <th>Classification</th>
+                    <th>Severity</th>
+                    <th>Telemetry</th>
+                    <th>Status</th>
+                    <th style="text-align: right;">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in alerts %}
+                    <tr>
+                        <td><span class="badge-id">#{{ row.alert_id }}</span></td>
+                        <td>
+                            <div class="student-chip">
+                                <div class="avatar" style="background: {{ row.student_id | avatar_color }};">
+                                    {{ row.student_name | initials }}
+                                </div>
+                                <div>
+                                    <div style="font-weight: 600;">{{ row.student_name }}</div>
+                                    <div style="font-size: 11px; color: var(--text-muted);">{{ row.student_id }} • Sec {{ row.section }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div style="font-weight: 600;">{{ row.subject }}</div>
+                            <div style="font-size: 11px; color: var(--text-muted);">{{ row.faculty }}</div>
+                        </td>
+                        <td>
+                            <div style="font-weight: 500;">Room {{ row.location }}</div>
+                            <div style="font-size: 11px; color: var(--text-muted);">{{ row.device_type }} #{{ row.device_id }}</div>
+                        </td>
+                        <td>
+                            <span style="font-weight: 600;">
+                                {% if row.alert_type == 'Drowsiness' %}😴 Drowsiness{% elif row.alert_type == 'Negligence' %}📱 Negligence{% else %}👀 Distraction{% endif %}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="severity-pill sev-{{ row.severity | lower }}">
+                                {{ row.severity }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if row.eye_closure_sec > 0 %}
+                                <span style="font-family: monospace; font-size: 12px; color: #a78bfa;">{{ row.eye_closure_sec }}s closure</span>
+                            {% else %}
+                                <span style="font-size: 12px; color: var(--text-muted);">Inattention</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="status-badge st-{{ row.status | lower }}">
+                                {{ row.status }}
+                            </span>
+                        </td>
+                        <td style="text-align: right;">
+                            {% if row.status != 'Resolved' %}
+                                <button type="button" class="btn-pill-action btn-pill-approve" onclick="openResolveModal('{{ row.alert_id }}', '{{ row.student_name }}')">
+                                    Resolve
+                                </button>
+                            {% else %}
+                                <span style="font-size: 11px; color: #34d399;">Resolved</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="9" style="text-align: center; padding: 32px 0; color: var(--text-muted);">
+                            No incident records found. Click "Simulate Event" above to generate live edge-camera detections.
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+
+<!-- MODAL: RECORD NEW ALERT -->
+<div class="modal-backdrop" id="newAlertModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <div class="modal-title">Record Incident Alert</div>
+            <button type="button" class="btn-icon" onclick="closeNewAlertModal()">✕</button>
+        </div>
+        <form action="{{ url_for('create_alert_route') }}" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <div class="modal-body">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Alert ID</label>
+                        <input type="number" name="alert_id" value="{{ next_alert_id }}" class="form-control" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Student</label>
+                        <select name="student_id" class="form-control" required>
+                            <option value="" disabled selected>Select student...</option>
+                            {% for s in students %}
+                                <option value="{{ s.student_id }}">{{ s.student_name }} ({{ s.student_id }} - Sec {{ s.class_section }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Session</label>
+                        <select name="session_id" class="form-control" required>
+                            <option value="" disabled selected>Select session...</option>
+                            {% for sess in sessions %}
+                                <option value="{{ sess.session_id }}">{{ sess.subject }} - {{ sess.faculty_name }} (Sec {{ sess.class_section }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Detection Sensor</label>
+                        <select name="device_id" class="form-control" required>
+                            <option value="" disabled selected>Select device...</option>
+                            {% for d in devices %}
+                                <option value="{{ d.device_id }}">{{ d.device_type }} #{{ d.device_id }} (Room {{ d.location }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Behavior Classification</label>
+                        <select name="alert_type" class="form-control" required>
+                            <option value="Drowsiness">😴 Drowsiness (Eye Closure / Fatigue)</option>
+                            <option value="Negligence">📱 Negligence (Secondary Device / Distraction)</option>
+                            <option value="Distraction">👀 Distraction (Disorientation / Gaze Deviation)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Risk Severity Level</label>
+                        <select name="severity" class="form-control" required>
+                            <option value="Low">🟢 Low (Brief micro-sleep &lt; 2.0s)</option>
+                            <option value="Medium" selected>🟡 Medium (Repeated inattention 2.0-4.0s)</option>
+                            <option value="High">🔴 High (Sustained sleep &gt; 4.0s)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group col-full">
+                        <label>Eye Closure Duration (seconds - IoT heuristic)</label>
+                        <input type="number" step="0.1" name="eye_closure_sec" value="3.5" class="form-control">
+                        <span style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Configurable demonstration rule for lab evaluation.</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeNewAlertModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Record Alert</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+
+<!-- MODAL: RESOLVE ALERT -->
+<div class="modal-backdrop" id="resolveModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <div class="modal-title" id="resolveModalTitle">Resolve Incident</div>
+            <button type="button" class="btn-icon" onclick="closeResolveModal()">✕</button>
+        </div>
+        <form action="{{ url_for('resolve_alert_route') }}" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="alert_id" id="resolveAlertId">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Resolution Summary &amp; Faculty Consultation Notes</label>
+                    <textarea name="resolution_notes" rows="4" class="form-control" placeholder="e.g. Student counseled after lab; verified illness/fatigue or brief lapse..." required></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeResolveModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Complete Resolution</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+
+{% block scripts %}
+<script>
+// CHARTS INITIALIZATION
+document.addEventListener("DOMContentLoaded", function() {
+    // 1. Peak Hours Density Bar Chart
+    const densityCtx = document.getElementById("densityChart").getContext("2d");
+    new Chart(densityCtx, {
+        type: "bar",
+        data: {
+            labels: {{ stats.hour_labels | tojson }},
+            datasets: [{
+                data: {{ stats.hour_data | tojson }},
+                backgroundColor: "#f97316",
+                borderRadius: 4,
+                barThickness: 16
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero: true, grid: { color: "rgba(255,255,255,0.06)" }, ticks: { color: "#64748b", stepSize: 1 } },
+                x: { grid: { display: false }, ticks: { color: "#94a3b8", font: { size: 10 } } }
+            }
+        }
+    });
+
+    // 2. Risk Detection Trend Flow Area Chart
+    const trendCtx = document.getElementById("trendChart").getContext("2d");
+    const purpleGradient = trendCtx.createLinearGradient(0, 0, 0, 180);
+    purpleGradient.addColorStop(0, "rgba(139, 92, 246, 0.45)");
+    purpleGradient.addColorStop(1, "rgba(139, 92, 246, 0.0)");
+
+    new Chart(trendCtx, {
+        type: "line",
+        data: {
+            labels: {{ stats.trend_days | tojson }},
+            datasets: [{
+                label: "All Incidents",
+                data: {{ stats.trend_counts | tojson }},
+                borderColor: "#8b5cf6",
+                backgroundColor: purpleGradient,
+                fill: true,
+                tension: 0.4,
+                borderWidth: 2.5,
+                pointRadius: 3,
+                pointBackgroundColor: "#8b5cf6"
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero: true, grid: { color: "rgba(255,255,255,0.06)" }, ticks: { color: "#64748b", stepSize: 1 } },
+                x: { grid: { display: false }, ticks: { color: "#94a3b8", font: { size: 10 } } }
+            }
+        }
+    });
+});
+
+// MODAL CONTROLLERS
+function openNewAlertModal() {
+    document.getElementById("newAlertModal").classList.add("active");
+}
+function closeNewAlertModal() {
+    document.getElementById("newAlertModal").classList.remove("active");
+}
+
+function openResolveModal(alertId, studentName) {
+    document.getElementById("resolveAlertId").value = alertId;
+    document.getElementById("resolveModalTitle").textContent = "Resolve Alert #" + alertId + " (" + studentName + ")";
+    document.getElementById("resolveModal").classList.add("active");
+}
+function closeResolveModal() {
+    document.getElementById("resolveModal").classList.remove("active");
+}
+</script>
+{% endblock %}

@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+
+{% block title %}Database Diagnostics • AegisAlert{% endblock %}
+{% block page_title %}Dual-Engine Database Diagnostics &amp; Health{% endblock %}
+
+{% block content %}
+<!-- Active Engine Status Card -->
+<div class="kpi-grid">
+    <div class="kpi-card">
+        <div class="kpi-card-header">
+            <span class="kpi-label">Active Connection Engine</span>
+            <div class="pulse-dot" style="color: {% if diag.active_engine == 'oracle' %}#34d399{% else %}#fbbf24{% endif %};"></div>
+        </div>
+        <div class="kpi-number" style="font-size: 20px;">
+            {% if diag.active_engine == 'oracle' %}
+                Oracle Database
+            {% else %}
+                SQLite (Offline Demo)
+            {% endif %}
+        </div>
+        <div class="kpi-footer">
+            {% if diag.active_engine == 'oracle' %}
+                <span class="badge-trend trend-positive">Production Connected</span>
+            {% else %}
+                <span class="badge-trend trend-amber">Offline Demo Mode</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="kpi-card">
+        <div class="kpi-card-header">
+            <span class="kpi-label">Oracle Status</span>
+            <div class="kpi-icon icon-blue">⚡</div>
+        </div>
+        <div class="kpi-number" style="font-size: 20px; color: {% if diag.oracle_status == 'Connected' %}#34d399{% else %}#f87171{% endif %};">
+            {{ diag.oracle_status }}
+        </div>
+        <div class="kpi-footer">
+            {% if diag.oracle_latency_ms %}
+                {{ diag.oracle_latency_ms }} ms latency
+            {% else %}
+                Driver: {% if diag.oracle_available %}Available{% else %}Missing{% endif %}
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="kpi-card">
+        <div class="kpi-card-header">
+            <span class="kpi-label">Configured Oracle DSN</span>
+            <div class="kpi-icon icon-purple">🏷</div>
+        </div>
+        <div style="font-family: monospace; font-size: 13.5px; font-weight: 700; margin: 4px 0; word-break: break-all;">
+            {{ diag.oracle_dsn }}
+        </div>
+        <div class="kpi-footer">User: <strong>{{ diag.oracle_user }}</strong></div>
+    </div>
+
+    <div class="kpi-card">
+        <div class="kpi-card-header">
+            <span class="kpi-label">Strict Oracle Mode</span>
+            <div class="kpi-icon icon-green">🛡</div>
+        </div>
+        <div class="kpi-number" style="font-size: 20px;">
+            {% if diag.oracle_strict %}ENABLED{% else %}DISABLED (Auto-Fallback){% endif %}
+        </div>
+        <div class="kpi-footer">Configured via ORACLE_STRICT_MODE</div>
+    </div>
+</div>
+
+<!-- Switch Engine Mode -->
+<div class="data-section-card">
+    <div class="table-toolbar">
+        <div>
+            <h3 style="font-size: 15px; font-weight: 700;">Database Engine Selection Mode</h3>
+            <p style="font-size: 12px; color: var(--text-muted);">Switch between Auto-Detect, Strict Oracle (for live lab evaluation), and SQLite demo mode</p>
+        </div>
+    </div>
+
+    <div style="padding: 20px; display:flex; gap: 14px; flex-wrap: wrap;">
+        <form action="{{ url_for('set_database_engine') }}" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="engine" value="auto">
+            <button type="submit" class="btn {% if diag.force_engine == 'auto' %}btn-primary{% else %}btn-secondary{% endif %}">
+                <span>Auto-Detect Mode (Default)</span>
+            </button>
+        </form>
+
+        <form action="{{ url_for('set_database_engine') }}" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="engine" value="oracle">
+            <button type="submit" class="btn {% if diag.force_engine == 'oracle' %}btn-primary{% else %}btn-secondary{% endif %}" title="Forces strict Oracle connection without falling back to SQLite">
+                <span>Strict Oracle Mode (Assessment Demo)</span>
+            </button>
+        </form>
+
+        <form action="{{ url_for('set_database_engine') }}" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="engine" value="sqlite">
+            <button type="submit" class="btn {% if diag.force_engine == 'sqlite' %}btn-primary{% else %}btn-secondary{% endif %}" title="Uses local SQLite demo database">
+                <span>Explicit SQLite Demo Mode</span>
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Table Counts Verification -->
+<div class="data-section-card">
+    <div class="table-toolbar">
+        <div>
+            <h3 style="font-size: 15px; font-weight: 700;">Active Schema Entity Row Verification</h3>
+            <p style="font-size: 12px; color: var(--text-muted);">Integrity check of tables in the currently active database backend</p>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="modern-table">
+            <thead>
+                <tr>
+                    <th>Relational Entity (Table)</th>
+                    <th>ER Diagram Role</th>
+                    <th>Row Count in Active Backend</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for tbl, count in diag.table_counts.items() %}
+                    <tr>
+                        <td><span class="badge-id" style="font-size: 13px;">{{ tbl }}</span></td>
+                        <td>
+                            {% if tbl == 'Users' %}Authentication &amp; RBAC
+                            {% elif tbl == 'Student' %}Core Demographics
+                            {% elif tbl == 'Sessions' %}Academic Timetable
+                            {% elif tbl == 'Device' %}Hardware Sensors
+                            {% elif tbl == 'Camera_Nodes' %}Camera Telemetry Endpoints
+                            {% elif tbl == 'Alert' %}Core Incident Log
+                            {% elif tbl == 'Emergency_Contact' %}Parent Contacts (ER Model)
+                            {% elif tbl == 'Proctor' %}Invigilators &amp; Faculty
+                            {% elif tbl == 'Audit_Log' %}Immutable Security Audit
+                            {% else %}Supporting Entity{% endif %}
+                        </td>
+                        <td><span style="font-weight: 700; font-size: 14px;">{{ count }}</span></td>
+                        <td><span class="status-badge st-resolved">Healthy &amp; Verified</span></td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Oracle Troubleshooting & Verification Commands Guide -->
+<div class="panel-card">
+    <div class="panel-header">
+        <div class="panel-title">Oracle Database 21c XE / Free Configuration Guide</div>
+        <span class="badge-id">Campus / Local PC Setup</span>
+    </div>
+
+    <div style="font-size: 13px; color: var(--text-secondary); display:flex; flex-direction:column; gap: 12px;">
+        <p>
+            Your local Oracle installation at <code>C:\app\CKHAASITH\product\21c\dbhomeXE</code> uses Oracle 21c Express Edition. The default pluggable database service is typically <strong><code>XEPDB1</code></strong> (or <code>FREEPDB1</code> on Oracle 23c Free).
+        </p>
+
+        <div style="background-color: var(--bg-card-subtle); padding: 12px; border-radius: var(--radius-md); font-family: monospace;">
+            <strong>To verify your Oracle Listener and active pluggable databases:</strong><br>
+            C:\&gt; lsnrctl status<br><br>
+            <strong>To execute the schema setup script in SQL*Plus:</strong><br>
+            C:\&gt; sqlplus system/&lt;your-password&gt;@localhost:1521/XEPDB1 @schema_oracle.sql
+        </div>
+
+        {% if diag.oracle_error %}
+            <div style="background-color: var(--accent-red-bg); border: 1px solid rgba(239, 68, 68, 0.4); border-radius: var(--radius-md); padding: 12px; color: #f87171;">
+                <strong>Latest Oracle Diagnostics Notice:</strong><br>
+                {{ diag.oracle_error }}
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

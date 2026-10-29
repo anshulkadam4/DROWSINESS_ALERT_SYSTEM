@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block title %}Reports &amp; Exports • AegisAlert{% endblock %}
+{% block page_title %}Academic Proctoring Reports &amp; Exports{% endblock %}
+
+{% block content %}
+<!-- Export Control Hub -->
+<div class="kpi-grid">
+    <div class="kpi-card">
+        <div class="kpi-card-header">
+            <span class="kpi-label">Alerts Telemetry Dataset</span>
+            <div class="kpi-icon icon-blue">📄</div>
+        </div>
+        <div style="font-size: 13.5px; color: var(--text-secondary); margin: 6px 0;">Complete classroom incident log with timestamps &amp; notes</div>
+        <a href="{{ url_for('export_csv', entity='alerts') }}" class="btn btn-primary" style="justify-content: center;">
+            Download Alerts CSV
+        </a>
+    </div>
+
+    <div class="kpi-card">
+        <div class="kpi-card-header">
+            <span class="kpi-label">Student Roster Export</span>
+            <div class="kpi-icon icon-purple">🎓</div>
+        </div>
+        <div style="font-size: 13.5px; color: var(--text-secondary); margin: 6px 0;">Demographics, sections, enrollment year &amp; risk tiers</div>
+        <a href="{{ url_for('export_csv', entity='students') }}" class="btn btn-secondary" style="justify-content: center;">
+            Download Students CSV
+        </a>
+    </div>
+
+    <div class="kpi-card">
+        <div class="kpi-card-header">
+            <span class="kpi-label">Academic Sessions Export</span>
+            <div class="kpi-icon icon-green">📅</div>
+        </div>
+        <div style="font-size: 13.5px; color: var(--text-secondary); margin: 6px 0;">Lecture schedules, faculty in-charge &amp; incident volume</div>
+        <a href="{{ url_for('export_csv', entity='sessions') }}" class="btn btn-secondary" style="justify-content: center;">
+            Download Sessions CSV
+        </a>
+    </div>
+
+    <div class="kpi-card">
+        <div class="kpi-card-header">
+            <span class="kpi-label">System Audit Trail</span>
+            <div class="kpi-icon icon-red">🛡</div>
+        </div>
+        <div style="font-size: 13.5px; color: var(--text-secondary); margin: 6px 0;">Immutable security log for assessment evaluation</div>
+        <a href="{{ url_for('export_csv', entity='audit') }}" class="btn btn-secondary" style="justify-content: center;">
+            Download Audit CSV
+        </a>
+    </div>
+</div>
+
+<!-- PRINTABLE PROCTORING REPORT PREVIEW -->
+<div class="data-section-card">
+    <div class="table-toolbar">
+        <div>
+            <h2 style="font-size: 15.5px; font-weight: 700;">Executive Proctoring Report (Printable Document)</h2>
+            <p style="font-size: 12px; color: var(--text-muted);">Formatted for departmental submission and laboratory evaluation</p>
+        </div>
+
+        <button type="button" class="btn btn-primary" onclick="window.print()">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+            <span>Print / Save PDF Report</span>
+        </button>
+    </div>
+
+    <div style="padding: 24px;">
+        <div style="display:flex; justify-content:space-between; border-bottom: 2px solid var(--border-color); padding-bottom: 14px; margin-bottom: 20px;">
+            <div>
+                <h3 style="font-size: 18px; font-weight: 800;">AegisAlert System • Assessment-4 Summary</h3>
+                <div style="font-size: 13px; color: var(--text-muted);">Vellore Institute of Technology • Department of Computer Science &amp; Engineering</div>
+            </div>
+            <div style="text-align: right; font-size: 12.5px; color: var(--text-muted);">
+                <div>Student Candidate: <strong>Demo Candidate</strong></div>
+                <div>Reg No: <strong>STU001</strong> | Section: <strong>A1</strong></div>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="modern-table">
+                <thead>
+                    <tr>
+                        <th>Incident</th>
+                        <th>Student Name</th>
+                        <th>Session Subject</th>
+                        <th>Location</th>
+                        <th>Classification</th>
+                        <th>Severity</th>
+                        <th>Duration</th>
+                        <th>Status</th>
+                        <th>Faculty Review Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in alerts %}
+                        <tr>
+                            <td>#{{ row.alert_id }}</td>
+                            <td><strong>{{ row.student_name }}</strong> ({{ row.student_id }})</td>
+                            <td>{{ row.subject }}</td>
+                            <td>Room {{ row.location }}</td>
+                            <td>{{ row.alert_type }}</td>
+                            <td>{{ row.severity }}</td>
+                            <td>{{ row.eye_closure_sec }}s</td>
+                            <td>{{ row.status }}</td>
+                            <td style="font-size: 12px; max-width: 200px;">{{ row.resolution_notes or 'Pending review' }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
