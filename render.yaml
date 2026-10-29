@@ -9,16 +9,10 @@ services:
       - key: SECRET_KEY
         generateValue: true
       - key: DEMO_MODE
-        value: "false"
+        value: "true"
       - key: DEMO_AUTO_LOGIN
         value: "false"
       - key: DB_FORCE_ENGINE
-        value: oracle
+        value: sqlite
       - key: ORACLE_STRICT_MODE
-        value: "true"
-      - key: DB_USER
-        sync: false
-      - key: DB_PASSWORD
-        sync: false
-      - key: DB_DSN
-        sync: false
+        value: "false"
