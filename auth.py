@@ -1,5 +1,5 @@
 """
-AegisAlert — Authentication & Role-Based Access Control
+Student Drowsiness Alert System — Authentication & Role-Based Access Control
 Manages user sessions, PBKDF2/SHA-256 password hashing, roles (Administrator vs. Faculty),
 and lightweight CSRF token validation.
 """

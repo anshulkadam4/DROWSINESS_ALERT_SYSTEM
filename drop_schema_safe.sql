@@ -1,13 +1,13 @@
 -- ============================================================================
--- AegisAlert — Safe Schema Cleanup Script
--- Purpose: Safely teardowns ONLY AegisAlert project-owned objects without
+-- Student Drowsiness Alert System — Safe Schema Cleanup Script
+-- Purpose: Safely tears down ONLY student monitoring project-owned objects without
 -- affecting any unrelated tables or system objects in the Oracle schema.
 -- ============================================================================
 
 SET ECHO ON;
 SET FEEDBACK ON;
 
-PROMPT Initiating safe teardown of AegisAlert objects...
+PROMPT Initiating safe teardown of student monitoring objects...
 
 -- Drop views
 BEGIN
@@ -61,4 +61,4 @@ EXCEPTION WHEN OTHERS THEN NULL;
 END;
 /
 
-PROMPT Safe cleanup of AegisAlert objects completed.
+PROMPT Safe cleanup of student monitoring objects completed.

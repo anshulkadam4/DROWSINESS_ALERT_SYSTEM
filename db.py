@@ -1,5 +1,5 @@
 """
-AegisAlert — Unified Dual-Engine Database Manager
+Student Drowsiness Alert System — Unified Dual-Engine Database Manager
 Supports:
   1. Oracle Database 21c XE / Free (XEPDB1, FREEPDB1, etc.) via python-oracledb (Thin Mode)
   2. SQLite 3 local fallback (local_demo.db) for offline demonstration and development
@@ -56,7 +56,7 @@ def get_oracle_config():
 
 
 class DatabaseError(Exception):
-    """Custom exception wrapper for AegisAlert database operations."""
+    """Custom exception wrapper for student monitoring database operations."""
     def __init__(self, message, code=None, engine=None, hint=None):
         super().__init__(message)
         self.message = message
@@ -238,7 +238,7 @@ def execute_sql(sql_oracle, sql_sqlite, params=None, fetch=None, commit=False):
 
 
 def init_sqlite_schema_if_needed():
-    """Initializes and seeds local SQLite demo database matching Assessment-4 & ER diagram."""
+    """Initializes and seeds the local SQLite demo database."""
     conn = sqlite3.connect(SQLITE_DB_PATH)
     cur = conn.cursor()
 
@@ -437,7 +437,7 @@ def init_sqlite_schema_if_needed():
                     [generate_password_hash(password, method="pbkdf2:sha256"), username],
                 )
 
-        # Seed Students (Preserves Assessment-4 records)
+        # Seed sample students.
         students_data = [
             ('STU001', 'Alex Morgan', 'A1', 'student1@example.com', 2025, 'CSE'),
             ('STU002', 'Taylor Reed', 'A1', 'student2@example.com', 2025, 'CSE'),
@@ -519,7 +519,7 @@ def init_sqlite_schema_if_needed():
 
         # Seed Audit Log
         audit_data = [
-            (1, 'SYSTEM_INIT', 'System', '0', 'SYSTEM', '2026-08-10 08:00', 'Initialized AegisAlert database schema with Assessment-4 foundation.'),
+            (1, 'SYSTEM_INIT', 'System', '0', 'SYSTEM', '2026-08-10 08:00', 'Initialized the student monitoring database schema.'),
             (2, 'CREATE', 'Alert', '1', 'IoT_Camera_Daemon', '2026-08-10 09:15', 'Sample alert record created for demo data.'),
             (3, 'RESOLVE', 'Alert', '1', 'Faculty One', '2026-08-10 11:30', 'Resolved with student consultation note.'),
             (4, 'CREATE', 'Alert', '4', 'IoT_Camera_Daemon', '2026-08-12 10:10', 'Sample telemetry event: High Drowsiness for STU001.')

@@ -1,4 +1,4 @@
-# AegisAlert SQL Command Reference
+# Student Drowsiness Alert System SQL Command Reference
 
 These examples are for the project's local SQLite database, `local_demo.db`.
 Run them from the project directory:

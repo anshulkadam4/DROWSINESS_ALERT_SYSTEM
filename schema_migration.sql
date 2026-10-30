@@ -1,13 +1,13 @@
 -- ============================================================================
--- AegisAlert — In-Place Database Migration Script
--- Purpose: Upgrades an existing Assessment-4 schema (Student, Sessions, Device, Alert)
+-- Student Drowsiness Alert System — In-Place Database Migration Script
+-- Purpose: Upgrades an existing student monitoring schema (Student, Sessions, Device, Alert)
 -- to the full ER Diagram architecture WITHOUT dropping existing tables or data.
 -- ============================================================================
 
 SET ECHO ON;
 SET FEEDBACK ON;
 
-PROMPT Starting AegisAlert non-destructive schema migration...
+PROMPT Starting the non-destructive student monitoring schema migration...
 
 -- 1. Extend Student Table (Add department column if missing)
 BEGIN
@@ -144,4 +144,4 @@ BEGIN
 END;
 /
 
-PROMPT AegisAlert schema migration completed successfully!
+PROMPT Student monitoring schema migration completed successfully!

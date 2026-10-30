@@ -1,7 +1,6 @@
 """
-AegisAlert — Students Drowsiness & Negligence Monitoring System
+Student Drowsiness Alert System
 Main Flask Web Application Backend
-Academic DBMS Project (DBMS Assessment-4 & Extended ER Architecture)
 Author: Anshul Suhas Kadam (25BCE2117)
 """
 
@@ -25,7 +24,7 @@ app.config["DEMO_MODE"] = os.environ.get("DEMO_MODE", "false").lower() in ("true
 secret_key = os.environ.get("SECRET_KEY")
 if not secret_key:
     if not app.config["DEMO_MODE"]:
-        raise RuntimeError("Set SECRET_KEY before starting AegisAlert outside DEMO_MODE.")
+        raise RuntimeError("Set SECRET_KEY before starting the app outside DEMO_MODE.")
     secret_key = secrets.token_hex(32)
 app.secret_key = secret_key
 app.config.update(
@@ -675,7 +674,7 @@ def export_csv(entity):
     filter_status = request.args.get("status")
     filter_severity = request.args.get("severity")
     csv_data = services.export_to_csv(entity, filter_status=filter_status, filter_severity=filter_severity)
-    filename = f"AegisAlert_{entity}_{datetime.now().strftime('%Y%m%d_%H%M')}.csv"
+    filename = f"student_alerts_{entity}_{datetime.now().strftime('%Y%m%d_%H%M')}.csv"
     return Response(
         csv_data,
         mimetype="text/csv",
@@ -741,5 +740,5 @@ def set_database_engine():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     host = os.environ.get("HOST", "127.0.0.1")
-    print(f"🚀 AegisAlert Operations Dashboard online at http://{host}:{port}")
+    print(f"🚀 Student Drowsiness Alert System online at http://{host}:{port}")
     app.run(host=host, port=port, debug=False)

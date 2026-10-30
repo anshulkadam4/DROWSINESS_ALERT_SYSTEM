@@ -1,7 +1,7 @@
 -- ============================================================================
--- AegisAlert — Student Drowsiness & Negligence Monitoring System
+-- Student Drowsiness Alert System
 -- Enterprise Oracle Database 21c XE / Free Setup Script
--- Academic Assessment-4 & Extended ER Diagram Implementation
+-- Relational database schema and sample data
 -- Author: Anshul Suhas Kadam (Reg No: 25BCE2117)
 -- ============================================================================
 -- Compatible with Oracle Database 21c Express Edition (XEPDB1)
@@ -17,7 +17,7 @@ WHENEVER SQLERROR CONTINUE;
 -- ----------------------------------------------------------------------------
 -- 1. SAFE CLEANUP OF PROJECT-OWNED OBJECTS ONLY
 -- ----------------------------------------------------------------------------
-PROMPT Cleaning up existing AegisAlert database objects...
+PROMPT Cleaning up existing student monitoring database objects...
 
 BEGIN
     FOR t IN (SELECT table_name FROM user_tables WHERE table_name IN (
@@ -326,7 +326,7 @@ BEGIN
         'Email',
         SYSDATE,
         'Simulated',
-        'AegisAlert Notice: ' || p_alert_type || ' (' || p_severity || ' risk) logged for ' || v_student_name || '.'
+        'Student Drowsiness Alert System: ' || p_alert_type || ' (' || p_severity || ' risk) logged for ' || v_student_name || '.'
     );
 
     -- 5. Record in Audit Log
@@ -443,14 +443,14 @@ END;
 /
 
 -- ----------------------------------------------------------------------------
--- 8. SEED DATA (Preserving Assessment-4 data + Enterprise Expansion)
+-- 8. SAMPLE DATA
 -- ----------------------------------------------------------------------------
 PROMPT Seeding default administrative and faculty accounts...
 -- Passwords: admin -> admin123, faculty -> faculty123
 INSERT INTO Users VALUES (1, 'admin', 'pbkdf2:sha256:600000$tJ9P0v2x$58b3c1ec252f9547d698e4f553f18e998797e55ce91ad05d0e2e92cbb4d99411', 'Chief Invigilator (Admin)', 'Administrator', 'admin@example.com', SYSDATE);
 INSERT INTO Users VALUES (2, 'faculty', 'pbkdf2:sha256:600000$rT2W8v7x$49a1d2ec141f8436c587d3e442e07d887686d44bd80ac04c0d1d81baa3c88302', 'Faculty Demo', 'Faculty', 'faculty@example.com', SYSDATE);
 
-PROMPT Seeding Students (Assessment-4 baseline + additions)...
+PROMPT Seeding sample students...
 INSERT INTO Student VALUES ('STU001', 'Alex Morgan', 'A1', 'student1@example.com', 2025, 'CSE');
 INSERT INTO Student VALUES ('STU002', 'Taylor Reed', 'A1', 'student2@example.com', 2025, 'CSE');
 INSERT INTO Student VALUES ('STU003', 'Jordan Lee', 'B2', 'student3@example.com', 2025, 'Data Science');
@@ -491,7 +491,7 @@ INSERT INTO Camera_Nodes VALUES ('NODE-ACC-01', 3, '192.168.10.103', 'N/A (MEMS)
 INSERT INTO Camera_Nodes VALUES ('NODE-EYE-01', 4, '192.168.10.104', '1080p IR 120Hz', 120, 'v2.9.0', 'Online');
 INSERT INTO Camera_Nodes VALUES ('NODE-CAM-02', 5, '192.168.10.105', '1080p HD', 30, 'v2.4.0', 'Online');
 
-PROMPT Seeding Alerts (Assessment-4 baseline rows + status enhancements)...
+PROMPT Seeding sample alerts...
 INSERT INTO Alert VALUES (1, 'STU001', 1, 1, 'Drowsiness', TO_DATE('2026-08-10 09:15','YYYY-MM-DD HH24:MI'), 'High', 'Resolved', 4.8, 'Student informed after lab; advised rest before morning class.', 'Faculty One', TO_DATE('2026-08-10 11:30','YYYY-MM-DD HH24:MI'));
 INSERT INTO Alert VALUES (2, 'STU002', 1, 2, 'Negligence', TO_DATE('2026-08-10 09:20','YYYY-MM-DD HH24:MI'), 'Medium', 'Acknowledged', 0.0, 'Observed secondary phone screen under desk.', 'Faculty One', TO_DATE('2026-08-10 09:35','YYYY-MM-DD HH24:MI'));
 INSERT INTO Alert VALUES (3, 'STU003', 2, 1, 'Drowsiness', TO_DATE('2026-08-12 10:05','YYYY-MM-DD HH24:MI'), 'Low', 'Resolved', 2.3, 'Brief fatigue event during lecture; recovered quickly.', 'Faculty Two', TO_DATE('2026-08-12 10:45','YYYY-MM-DD HH24:MI'));
@@ -533,4 +533,4 @@ SELECT 'Alert_Notifications', COUNT(*) FROM Alert_Notifications
 UNION ALL
 SELECT 'Audit_Log', COUNT(*) FROM Audit_Log;
 
-PROMPT AegisAlert Oracle Schema Setup Completed Successfully!
+PROMPT Student Drowsiness Alert System Oracle schema setup completed successfully!

@@ -1,5 +1,5 @@
 """
-AegisAlert — Core Application Services & Business Logic Layer
+Student Drowsiness Alert System — Core Application Services & Business Logic Layer
 Implements CRUD, foreign-key integrity, workflow state transitions,
 repeat incident pattern detection, CSV bulk import/export, telemetry simulation,
 database-backed notifications, and audit logging.
@@ -522,7 +522,7 @@ def dispatch_simulated_alert_notification(alert_id: int, student_id: str, alert_
         email = s_row[0] if s_row else "student@example.com"
         name = s_row[1] if s_row else "Student"
 
-        msg_body = f"AegisAlert System: {alert_type} ({severity} risk) detected during class lecture for {name} ({student_id}). Please consult proctor if rest or assistance is needed."
+        msg_body = f"Student Drowsiness Alert System: {alert_type} ({severity} risk) detected during class lecture for {name} ({student_id}). Please consult faculty if rest or assistance is needed."
 
         if engine == "oracle":
             cur.execute("""

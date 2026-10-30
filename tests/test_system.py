@@ -1,5 +1,5 @@
 """
-AegisAlert — Comprehensive Automated Test Suite
+Student Drowsiness Alert System — Automated Test Suite
 Verifies:
   - Database schema initialization & integrity (Users, Student, Sessions, Device, Alert, etc.)
   - Student CRUD, Emergency Contact relationship, CSV bulk import validation
@@ -32,7 +32,7 @@ import services
 from app import app
 
 
-class TestAegisAlertSystem(unittest.TestCase):
+class TestStudentDrowsinessAlertSystem(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):

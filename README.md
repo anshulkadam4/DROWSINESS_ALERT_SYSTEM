@@ -1,6 +1,6 @@
-# AegisAlert • Students Drowsiness & Negligence Monitoring System
+# Student Drowsiness Alert System
 
-> **Academic DBMS Assessment-4 Project & Extended ER Architecture**
+> **Demo-ready student monitoring dashboard**
 > **Student Author:** Anshul Suhas Kadam
 > **Registration Number:** 25BCE2117
 > **Section:** A1
@@ -10,15 +10,15 @@
 
 ## 📌 Executive Project Overview
 
-**AegisAlert** is an academic prototype for recording and reviewing sample classroom attention events. It demonstrates how such records could be managed; the included app does not connect to classroom cameras or make AI-based behavior detections.
+This project is a demo-ready student monitoring dashboard for classroom drowsiness and alert tracking. It shows how to record and review sample classroom attention events using a web app and database-backed workflow. It does not connect to live classroom cameras or perform automatic AI-based detection.
 
-The system features a **Dual-Client Architecture**:
-1. **Security Operations Center Web Portal (`app.py`)**: An administrative dashboard styled after cybersecurity telemetry operations centers. Features database-backed KPI metrics, an interactive chronological incident timeline, Chart.js analytics, alert acknowledge/resolve workflows, student dossier profiles, sample device telemetry, simulated notifications, and an audit trail.
-2. **Desktop Proctor GUI Application (`alert_form.py`)**: A native Python `tkinter` desktop utility tailored for proctors inside lecture halls for rapid alert logging and review.
+The system features a **web-based monitoring dashboard**:
+1. **Operations Web Portal (`app.py`)**: A dashboard for monitoring student drowsiness alerts, reviewing incident timelines, charting trends, acknowleding and resolving alerts, viewing student profiles, and reviewing audit logs.
+2. **Desktop Proctor Utility (`alert_form.py`)**: A Python `tkinter` helper for quick alert logging and local review.
 
-Both clients share a **Dual-Engine Relational Database Layer (`db.py`)**:
+Both clients share a **dual-engine relational database layer (`db.py`)**:
 - **Primary Engine**: **Oracle Database 21c Express Edition (`XEPDB1`)** or **Oracle Database 23c Free (`FREEPDB1`)** using thin-mode connection pooling.
-- **Offline Fallback Engine**: **SQLite 3 (`local_demo.db`)** with the schema and queries needed for an offline evaluation without Oracle.
+- **Offline Fallback Engine**: **SQLite 3 (`local_demo.db`)** with the schema and queries needed for offline demonstration without Oracle.
 
 ---
 
@@ -291,7 +291,7 @@ For an Oracle deployment instead, configure a remotely reachable Oracle database
 ├── services.py             # Business Logic, Workflows, Simulation & Analytics Services
 ├── schema_oracle.sql       # Full Oracle 21c/23c DDL, Views, Procedures & Seed Script
 ├── schema_migration.sql    # Non-destructive in-place Oracle migration script
-├── drop_schema_safe.sql    # Safe cleanup script for AegisAlert database objects only
+├── drop_schema_safe.sql    # Safe cleanup script for project-owned database objects only
 ├── local_demo.db           # Pre-seeded SQLite database for zero-config offline demos
 ├── requirements.txt        # Python package dependencies
 ├── .env.example            # Environment configuration template
